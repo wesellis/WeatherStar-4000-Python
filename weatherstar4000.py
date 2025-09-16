@@ -789,16 +789,14 @@ class WeatherStar4000Complete:
         self.screen.blit(time_text, time_rect)
 
     def show_context_menu(self):
-        """Show settings menu on right-click"""
-        # Create menu overlay
-        menu_surface = pygame.Surface((400, 350))
-        menu_surface.fill((40, 40, 80))  # Dark blue background
-        pygame.draw.rect(menu_surface, COLORS['white'], menu_surface.get_rect(), 2)
-
-        # Menu title
-        title = self.font_normal.render("WEATHERSTAR SETTINGS", True, COLORS['yellow'])
-        title_rect = title.get_rect(center=(200, 30))
-        menu_surface.blit(title, title_rect)
+        """Show Windows 95-style menu on right-click"""
+        # Classic Windows 95 colors
+        WIN95_GREY = (192, 192, 192)  # Classic Windows grey
+        WIN95_DARK = (128, 128, 128)  # Dark grey for shadows
+        WIN95_LIGHT = (255, 255, 255)  # White for highlights
+        WIN95_BLACK = (0, 0, 0)  # Black text
+        WIN95_BLUE = (0, 0, 128)  # Selection blue
+        WIN95_SELECTED = (10, 36, 106)  # Navy blue for selected items
 
         # Check for settings attribute
         if not hasattr(self, 'settings'):
@@ -807,39 +805,105 @@ class WeatherStar4000Complete:
                 'units': 'F',
                 'music_volume': 0.3,
                 'show_trends': True,
-                'show_historical': True
+                'show_historical': True,
+                'show_news': False
             }
 
+        # Create smaller, compact menu
+        menu_width = 280
+        menu_height = 320
+        menu_surface = pygame.Surface((menu_width, menu_height))
+        menu_surface.fill(WIN95_GREY)
+
+        # Draw 3D raised border (Windows 95 style)
+        # Top and left edges (light)
+        pygame.draw.line(menu_surface, WIN95_LIGHT, (0, 0), (menu_width-1, 0), 2)
+        pygame.draw.line(menu_surface, WIN95_LIGHT, (0, 0), (0, menu_height-1), 2)
+        # Bottom and right edges (dark)
+        pygame.draw.line(menu_surface, WIN95_DARK, (0, menu_height-1), (menu_width-1, menu_height-1), 2)
+        pygame.draw.line(menu_surface, WIN95_DARK, (menu_width-1, 0), (menu_width-1, menu_height-1), 2)
+
+        # Title bar with gradient effect
+        title_height = 18
+        title_rect = pygame.Rect(2, 2, menu_width-4, title_height)
+        pygame.draw.rect(menu_surface, WIN95_SELECTED, title_rect)
+        title_font = pygame.font.Font(None, 14)  # Smaller font
+        title = title_font.render("WeatherStar Settings", True, WIN95_LIGHT)
+        menu_surface.blit(title, (6, 5))
+
+        # Menu categories with separators
+        y_pos = 25
+        item_font = pygame.font.Font(None, 13)  # Small Windows font
+
+        # Category: Display Options
+        category = item_font.render("Display Options", True, WIN95_BLACK)
+        menu_surface.blit(category, (8, y_pos))
+        y_pos += 16
+        pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos), (menu_width-8, y_pos), 1)
+        y_pos += 4
+
         menu_items = [
-            ("1. Toggle Marine Forecast", "show_marine"),
-            ("2. Toggle Weather Trends", "show_trends"),
-            ("3. Toggle Historical Data", "show_historical"),
-            ("4. Music Volume +/-", "volume"),
-            ("5. Refresh Weather Data", "refresh"),
-            ("ESC. Close Menu", None)
+            ("[1] Marine Forecast", "show_marine", self.settings.get('show_marine', False)),
+            ("[2] Weather Trends", "show_trends", self.settings.get('show_trends', True)),
+            ("[3] Historical Data", "show_historical", self.settings.get('show_historical', True)),
+            ("---", None, None),  # Separator
+            ("Audio Settings", "category", None),
+            ("[4] Music Volume", "volume", self.settings.get('music_volume', 0.3)),
+            ("---", None, None),  # Separator
+            ("News & Information", "category", None),
+            ("[5] MSN Top Stories", "msn_news", False),
+            ("[6] Reddit Headlines", "reddit_news", False),
+            ("---", None, None),  # Separator
+            ("System", "category", None),
+            ("[R] Refresh Weather", "refresh", None),
+            ("[ESC] Close Menu", None, None)
         ]
 
-        y_pos = 70
-        for text, setting in menu_items:
-            if setting == "show_marine":
-                status = "ON" if self.settings.get('show_marine', False) else "OFF"
-                text += f" [{status}]"
-            elif setting == "show_trends":
-                status = "ON" if self.settings.get('show_trends', True) else "OFF"
-                text += f" [{status}]"
-            elif setting == "show_historical":
-                status = "ON" if self.settings.get('show_historical', True) else "OFF"
-                text += f" [{status}]"
-            elif setting == "volume":
-                vol_pct = int(self.settings.get('music_volume', 0.3) * 100)
-                text += f" [{vol_pct}%]"
+        for text, setting, value in menu_items:
+            if text == "---":
+                # Draw separator line
+                pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos+2), (menu_width-8, y_pos+2), 1)
+                pygame.draw.line(menu_surface, WIN95_LIGHT, (8, y_pos+3), (menu_width-8, y_pos+3), 1)
+                y_pos += 8
+            elif setting == "category":
+                # Category header
+                cat_text = item_font.render(text, True, WIN95_BLACK)
+                menu_surface.blit(cat_text, (8, y_pos))
+                y_pos += 16
+                pygame.draw.line(menu_surface, WIN95_DARK, (8, y_pos), (menu_width-8, y_pos), 1)
+                y_pos += 4
+            else:
+                # Regular menu item with checkbox style
+                item_x = 20
+                # Draw checkbox for toggleable items
+                if setting in ["show_marine", "show_trends", "show_historical", "msn_news", "reddit_news"]:
+                    # Draw checkbox
+                    checkbox = pygame.Rect(item_x, y_pos, 11, 11)
+                    pygame.draw.rect(menu_surface, WIN95_LIGHT, checkbox)
+                    pygame.draw.rect(menu_surface, WIN95_BLACK, checkbox, 1)
+                    # Draw inner shadow
+                    pygame.draw.line(menu_surface, WIN95_DARK, (item_x+1, y_pos+1), (item_x+9, y_pos+1), 1)
+                    pygame.draw.line(menu_surface, WIN95_DARK, (item_x+1, y_pos+1), (item_x+1, y_pos+9), 1)
+                    # Draw checkmark if enabled
+                    if value:
+                        # Draw a checkmark
+                        pygame.draw.lines(menu_surface, WIN95_BLACK, False,
+                                        [(item_x+2, y_pos+5), (item_x+4, y_pos+7), (item_x+8, y_pos+3)], 2)
+                    item_x += 15
 
-            item = self.font_small.render(text, True, COLORS['white'])
-            menu_surface.blit(item, (30, y_pos))
-            y_pos += 35
+                # Draw text
+                if setting == "volume":
+                    vol_pct = int(value * 100)
+                    text = f"{text}: {vol_pct}%"
 
-        # Display menu
-        self.screen.blit(menu_surface, (120, 65))
+                item_text = item_font.render(text, True, WIN95_BLACK)
+                menu_surface.blit(item_text, (item_x, y_pos))
+                y_pos += 18
+
+        # Display menu centered on screen
+        menu_x = (self.screen.get_width() - menu_width) // 2
+        menu_y = (self.screen.get_height() - menu_height) // 2
+        self.screen.blit(menu_surface, (menu_x, menu_y))
         pygame.display.flip()
 
         # Wait for input
@@ -850,36 +914,48 @@ class WeatherStar4000Complete:
                     if event.key == pygame.K_ESCAPE:
                         waiting = False
                     elif event.key == pygame.K_1:
-                        # Toggle marine forecast
                         self.settings['show_marine'] = not self.settings.get('show_marine', False)
                         self.update_display_list()
                         logger.main_logger.info(f"Marine forecast: {self.settings['show_marine']}")
-                        waiting = False
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_2:
-                        # Toggle weather trends
                         self.settings['show_trends'] = not self.settings.get('show_trends', True)
                         logger.main_logger.info(f"Weather trends: {self.settings['show_trends']}")
-                        waiting = False
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_3:
-                        # Toggle historical data
                         self.settings['show_historical'] = not self.settings.get('show_historical', True)
                         logger.main_logger.info(f"Historical data: {self.settings['show_historical']}")
-                        waiting = False
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_4:
-                        # Adjust volume
                         current_vol = self.settings.get('music_volume', 0.3)
-                        new_vol = min(1.0, current_vol + 0.1)
-                        if new_vol >= 1.0:
-                            new_vol = 0.0  # Wrap around
+                        new_vol = (current_vol + 0.1) % 1.1
+                        if new_vol > 1.0:
+                            new_vol = 0.0
                         self.settings['music_volume'] = new_vol
                         if self.music:
                             self.music.set_volume(new_vol)
                         logger.main_logger.info(f"Music volume: {int(new_vol * 100)}%")
-                        waiting = False
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_5:
-                        # Refresh weather data
+                        # Show MSN news
+                        self.show_news_display('msn')
+                        waiting = False
+                    elif event.key == pygame.K_6:
+                        # Show Reddit news
+                        self.show_news_display('reddit')
+                        waiting = False
+                    elif event.key == pygame.K_r:
                         self.get_weather_data()
                         logger.main_logger.info("Weather data refreshed")
+                        waiting = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    # Click to close menu
+                    mouse_x, mouse_y = event.pos
+                    if not (menu_x <= mouse_x <= menu_x + menu_width and menu_y <= mouse_y <= menu_y + menu_height):
                         waiting = False
 
     def update_display_list(self):
@@ -910,6 +986,75 @@ class WeatherStar4000Complete:
 
         self.display_list = base_displays
         self.displays = [mode for mode in self.display_list if mode != DisplayMode.PROGRESS]
+
+    def show_news_display(self, source):
+        """Display news headlines from MSN or Reddit"""
+        self.draw_background('1')
+
+        if source == 'msn':
+            self.draw_header("MSN", "Top Stories")
+            # Fetch MSN headlines (simulated for now)
+            headlines = [
+                "Breaking: Major Weather System Moving Across US",
+                "Tech: Apple Announces New Product Line",
+                "Sports: Championship Game Results",
+                "World: Global Climate Summit Begins",
+                "Business: Stock Market Reaches New High",
+                "Entertainment: Award Show Winners Announced",
+                "Health: New Medical Breakthrough Reported",
+                "Science: Space Mission Successfully Launches"
+            ]
+        else:  # reddit
+            self.draw_header("Reddit", "Headlines")
+            # Fetch Reddit headlines (simulated for now)
+            headlines = [
+                "r/news: Major Storm System Approaching East Coast",
+                "r/worldnews: International Summit Concludes",
+                "r/technology: New AI Breakthrough Announced",
+                "r/science: Scientists Discover New Species",
+                "r/gaming: Popular Game Gets Major Update",
+                "r/movies: Box Office Records Broken",
+                "r/sports: Underdog Team Wins Championship",
+                "r/space: New Images from Space Telescope"
+            ]
+
+        # Display headlines
+        y_pos = 120
+        for i, headline in enumerate(headlines[:10], 1):
+            # Number
+            num_text = self.font_small.render(f"{i}.", True, COLORS['yellow'])
+            self.screen.blit(num_text, (60, y_pos))
+
+            # Headline (truncate if too long)
+            if len(headline) > 60:
+                headline = headline[:57] + "..."
+            headline_text = self.font_small.render(headline, True, COLORS['white'])
+            self.screen.blit(headline_text, (85, y_pos))
+
+            y_pos += 28
+
+        # Footer with update time
+        footer_text = self.font_small.render("Press any key to return", True, COLORS['yellow'])
+        footer_rect = footer_text.get_rect(center=(320, 420))
+        self.screen.blit(footer_text, footer_rect)
+
+        pygame.display.flip()
+
+        # Wait for key press to return
+        waiting = True
+        while waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                    waiting = False
+
+        logger.main_logger.info(f"Displayed {source} news")
+
+    def fetch_real_news(self, source):
+        """Fetch real news headlines from APIs (future enhancement)"""
+        # This would use requests to fetch real headlines
+        # For MSN: Could scrape or use news API
+        # For Reddit: Use Reddit API or PRAW library
+        pass
 
     def draw_current_conditions(self):
         """Draw Current Conditions screen matching ws4kp exact layout"""
