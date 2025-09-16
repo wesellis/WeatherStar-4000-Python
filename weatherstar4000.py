@@ -1067,8 +1067,8 @@ class WeatherStar4000Complete:
             news_font = pygame.font.Font(None, 20)
             title_font = pygame.font.Font(None, 22)
 
-        # Create clipping region for scrolling area
-        clip_rect = pygame.Rect(40, 100, 560, 320)
+        # Create clipping region for scrolling area (reduced width by 30px total)
+        clip_rect = pygame.Rect(55, 100, 530, 320)  # Was 40, 100, 560, 320
         self.screen.set_clip(clip_rect)
 
         # Calculate total height needed for all headlines
@@ -1081,9 +1081,9 @@ class WeatherStar4000Complete:
         for i, headline in enumerate(headlines[:20], 1):  # Show up to 20 headlines
             # Only draw if potentially visible
             if y_pos > -200 and y_pos < 500:
-                # Number in yellow
+                # Number in yellow (moved in by 15px)
                 num_text = title_font.render(f"{i}.", True, COLORS['yellow'])
-                self.screen.blit(num_text, (50, y_pos))
+                self.screen.blit(num_text, (65, y_pos))  # Was 50, now 65 (+15px)
 
                 # Word-wrap the headline for better readability
                 words = headline.split()
@@ -1094,7 +1094,7 @@ class WeatherStar4000Complete:
                     test_line = current_line + " " + word if current_line else word
                     test_surface = news_font.render(test_line, True, COLORS['white'])
 
-                    if test_surface.get_width() > 500:  # Max width for text
+                    if test_surface.get_width() > 470:  # Max width for text (was 500, now 470)
                         if current_line:
                             lines.append(current_line)
                         current_line = word
@@ -1109,7 +1109,7 @@ class WeatherStar4000Complete:
                 for line in lines:
                     if line_y > 95 and line_y < 420:  # Only draw visible lines within clip region
                         text_surface = news_font.render(line, True, COLORS['white'])
-                        self.screen.blit(text_surface, (80, line_y))
+                        self.screen.blit(text_surface, (95, line_y))  # Was 80, now 95 (+15px)
                     line_y += line_height
 
                 # Move to next headline position
