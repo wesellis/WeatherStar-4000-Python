@@ -20,6 +20,7 @@ import logging
 
 # Import our custom logger
 from weatherstar_logger import init_logger, get_logger
+import weatherstar_settings
 
 # Initialize logging
 logger = init_logger()
@@ -1142,29 +1143,34 @@ class WeatherStar4000Complete:
                                     self.screen.blit(text_part, (x_pos, line_y))
                                     x_pos += text_part.get_width() + 5
                         else:
-                            # For MSN or non-Reddit content, check for other patterns
-                            if source == "msn" and ("BREAKING:" in line or "UPDATE:" in line):
-                                # Highlight breaking news in red
-                                if "BREAKING:" in line:
-                                    parts = line.split("BREAKING:", 1)
-                                    if len(parts) == 2:
-                                        breaking_text = news_font.render("BREAKING:", True, COLORS['red'])
-                                        self.screen.blit(breaking_text, (95, line_y))
+                            # For MSN or non-Reddit content
+                            if source == "msn" and ":" in line:
+                                # Color the category (text before first colon) in cyan
+                                parts = line.split(":", 1)
+                                if len(parts) == 2:
+                                    category = parts[0]
+                                    rest = ":" + parts[1]
+
+                                    # Special handling for BREAKING
+                                    if category == "BREAKING":
+                                        category_text = news_font.render(category + ":", True, COLORS['red'])
+                                        self.screen.blit(category_text, (95, line_y))
                                         rest_text = news_font.render(parts[1], True, COLORS['white'])
-                                        self.screen.blit(rest_text, (95 + breaking_text.get_width(), line_y))
-                                    else:
-                                        text_surface = news_font.render(line, True, COLORS['white'])
-                                        self.screen.blit(text_surface, (95, line_y))
-                                elif "UPDATE:" in line:
-                                    parts = line.split("UPDATE:", 1)
-                                    if len(parts) == 2:
-                                        update_text = news_font.render("UPDATE:", True, COLORS['yellow'])
-                                        self.screen.blit(update_text, (95, line_y))
+                                        self.screen.blit(rest_text, (95 + category_text.get_width(), line_y))
+                                    elif category == "UPDATE":
+                                        category_text = news_font.render(category + ":", True, COLORS['yellow'])
+                                        self.screen.blit(category_text, (95, line_y))
                                         rest_text = news_font.render(parts[1], True, COLORS['white'])
-                                        self.screen.blit(rest_text, (95 + update_text.get_width(), line_y))
+                                        self.screen.blit(rest_text, (95 + category_text.get_width(), line_y))
                                     else:
-                                        text_surface = news_font.render(line, True, COLORS['white'])
-                                        self.screen.blit(text_surface, (95, line_y))
+                                        # Regular categories in cyan
+                                        category_text = news_font.render(category + ":", True, COLORS['cyan'])
+                                        self.screen.blit(category_text, (95, line_y))
+                                        rest_text = news_font.render(parts[1], True, COLORS['white'])
+                                        self.screen.blit(rest_text, (95 + category_text.get_width(), line_y))
+                                else:
+                                    text_surface = news_font.render(line, True, COLORS['white'])
+                                    self.screen.blit(text_surface, (95, line_y))
                             else:
                                 # Regular text
                                 text_surface = news_font.render(line, True, COLORS['white'])

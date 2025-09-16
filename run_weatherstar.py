@@ -65,25 +65,15 @@ def main():
             input("\nPress Enter to exit...")
             sys.exit(1)
 
-    # Get location
+    # Auto-detect location without prompts
     print("\n" + "=" * 50)
-    print("Location Setup")
+    print("Starting WeatherStar 4000...")
+    print("Auto-detecting location...")
     print("=" * 50)
-    print("Enter your location (or press Enter to auto-detect)")
-    print("You can find your coordinates at: https://www.latlong.net/")
 
-    lat_input = input("Latitude [auto-detect]: ").strip()
-    lon_input = input("Longitude [auto-detect]: ").strip()
-
-    if lat_input and lon_input:
-        lat = float(lat_input)
-        lon = float(lon_input)
-        print(f"\nStarting WeatherStar 4000 for {lat}, {lon}...")
-    else:
-        print("\nAuto-detecting location...")
-        lat = None
-        lon = None
-        print("Starting WeatherStar 4000...")
+    # Always auto-detect - can be changed via menu
+    lat = None
+    lon = None
     print("Controls:")
     print("  Space - Pause/Resume auto-play")
     print("  Arrow Keys - Navigate displays")
