@@ -82,6 +82,8 @@ COLORS = {
     'blue_gradient_2': (0, 16, 64),    # Gradient end
     'light_blue': (128, 128, 255),     # Low temperatures
     'blue': (128, 128, 255),           # Alias for light_blue
+    'cyan': (0, 255, 255),             # Reddit subreddits
+    'red': (255, 0, 0),                # Breaking news
 }
 
 class WeatherIcon:
@@ -434,6 +436,9 @@ class WeatherStar4000Complete:
         self.display_timer = 0
         self.is_playing = True
 
+        # Update display list after settings are initialized
+        # This will be called again after settings are fully set up
+
         # Scrolling text
         self.scroller = ScrollingText(self.font_scroller if hasattr(self, 'font_scroller') else self.font_small)
 
@@ -443,6 +448,9 @@ class WeatherStar4000Complete:
         self.office = None
         self.gridX = None
         self.gridY = None
+
+        # Now that settings are initialized, update display list to include MSN/Reddit if enabled
+        self.update_display_list()
 
         logger.main_logger.info("WeatherStar 4000 initialization complete")
 
@@ -1071,8 +1079,8 @@ class WeatherStar4000Complete:
             news_font = pygame.font.Font(None, 20)
             title_font = pygame.font.Font(None, 22)
 
-        # Create clipping region for scrolling area (reduced width by 30px total, height by 15px at bottom)
-        clip_rect = pygame.Rect(55, 100, 530, 305)  # Was 40, 100, 560, 320 - reduced bottom by 15px
+        # Create clipping region for scrolling area (reduced width by 30px total, height by 22px at bottom)
+        clip_rect = pygame.Rect(55, 100, 530, 298)  # Was 40, 100, 560, 320 - reduced bottom by 22px total
         self.screen.set_clip(clip_rect)
 
         # Calculate total height needed for all headlines
@@ -1111,14 +1119,14 @@ class WeatherStar4000Complete:
                 # Draw wrapped lines with color coding
                 line_y = y_pos
                 for line in lines:
-                    if line_y > 95 and line_y < 405:  # Only draw visible lines within clip region (adjusted for shorter area)
+                    if line_y > 95 and line_y < 398:  # Only draw visible lines within clip region (adjusted for shorter area)
                         # Check if this is a Reddit headline and color-code subreddits
-                        if source == "reddit" and "/r/" in line:
-                            # Split the line to find and color /r/ mentions
+                        if source == "reddit" and ("r/" in line or "/r/" in line):
+                            # Split the line to find and color r/ mentions
                             x_pos = 95
                             parts = line.split()
                             for part in parts:
-                                if part.startswith("/r/") or part.startswith("r/"):
+                                if part.startswith("r/") or part.startswith("/r/"):
                                     # Color subreddit mentions in cyan
                                     colored_text = news_font.render(part, True, COLORS['cyan'])
                                     self.screen.blit(colored_text, (x_pos, line_y))
