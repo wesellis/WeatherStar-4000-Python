@@ -1054,31 +1054,19 @@ class WeatherStar4000Complete:
         logger.main_logger.debug("Drew MSN news display")
 
     def draw_local_news(self):
-        """Display local news headlines with red emergency background"""
-        # Draw red emergency background
-        self.screen.fill((139, 0, 0))  # Dark red background
+        """Display local news headlines"""
+        self.draw_background('1')
 
-        # Draw header with emergency styling
-        header_rect = pygame.Rect(0, 0, 640, 80)
-        pygame.draw.rect(self.screen, (255, 0, 0), header_rect)  # Bright red header
-
-        # Draw "LOCAL NEWS" text in white
-        header_text = self.header_font.render("LOCAL NEWS", True, (255, 255, 255))
-        text_rect = header_text.get_rect(center=(320, 40))
-        self.screen.blit(header_text, text_rect)
-
-        # Get location description
+        # Get location description for header
         city_name = get_local_news.get_city_name_from_coords(self.lat, self.lon)
-        subtitle_text = self.time_font.render(city_name, True, (255, 255, 255))
-        subtitle_rect = subtitle_text.get_rect(center=(320, 65))
-        self.screen.blit(subtitle_text, subtitle_rect)
+        self.draw_header("Local News", city_name)
 
         # Get local news headlines
         headlines = get_local_news.get_local_news_by_location(self.lat, self.lon)
 
-        # Display with emergency styling (white text on red)
-        self._display_scrolling_headlines(headlines, "local_emergency")
-        logger.main_logger.debug("Drew local news display with emergency background")
+        # Display with normal styling
+        self._display_scrolling_headlines(headlines, "local")
+        logger.main_logger.debug("Drew local news display")
 
     def draw_reddit_news(self):
         """Display Reddit news headlines with scrolling"""
@@ -1151,10 +1139,7 @@ class WeatherStar4000Complete:
             # Only draw if potentially visible
             if y_pos > -200 and y_pos < 500:
                 # Number color based on source
-                if source == "local_emergency":
-                    num_color = (255, 255, 255)  # White for emergency
-                else:
-                    num_color = COLORS['yellow']
+                num_color = COLORS['yellow']  # Always yellow for consistency
                 num_text = title_font.render(f"{i}.", True, num_color)
                 self.screen.blit(num_text, (65, y_pos))  # Was 50, now 65 (+15px)
 
@@ -1209,29 +1194,31 @@ class WeatherStar4000Complete:
                                     text_part = news_font.render(part, True, COLORS['white'])
                                     self.screen.blit(text_part, (x_pos, line_y))
                                     x_pos += text_part.get_width() + 5
-                        elif source == "local_emergency":
-                            # For local emergency news, check for special prefixes
+                        elif source == "local":
+                            # For local news, color-code like MSN with categories
                             if ":" in line:
                                 parts = line.split(":", 1)
                                 if len(parts) == 2:
                                     category = parts[0]
                                     # Check for emergency keywords
                                     if any(word in category.upper() for word in ["EMERGENCY", "BREAKING", "ALERT"]):
-                                        category_text = news_font.render(category + ":", True, COLORS['yellow'])
+                                        category_text = news_font.render(category + ":", True, COLORS['red'])
                                         self.screen.blit(category_text, (95, line_y))
-                                        rest_text = news_font.render(parts[1], True, (255, 255, 255))
+                                        rest_text = news_font.render(parts[1], True, COLORS['white'])
                                         self.screen.blit(rest_text, (95 + category_text.get_width(), line_y))
                                     else:
-                                        # Regular local news - all white
-                                        text_surface = news_font.render(line, True, (255, 255, 255))
-                                        self.screen.blit(text_surface, (95, line_y))
+                                        # Regular categories in cyan
+                                        category_text = news_font.render(category + ":", True, COLORS['cyan'])
+                                        self.screen.blit(category_text, (95, line_y))
+                                        rest_text = news_font.render(parts[1], True, COLORS['white'])
+                                        self.screen.blit(rest_text, (95 + category_text.get_width(), line_y))
                                 else:
-                                    # No colon, just draw in white
-                                    text_surface = news_font.render(line, True, (255, 255, 255))
+                                    # Just draw in white
+                                    text_surface = news_font.render(line, True, COLORS['white'])
                                     self.screen.blit(text_surface, (95, line_y))
                             else:
                                 # No colon, just draw in white
-                                text_surface = news_font.render(line, True, (255, 255, 255))
+                                text_surface = news_font.render(line, True, COLORS['white'])
                                 self.screen.blit(text_surface, (95, line_y))
                         else:
                             # For MSN or non-Reddit content
