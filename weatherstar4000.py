@@ -1627,19 +1627,19 @@ class WeatherStar4000Complete:
         # Create scrolling effect - start halfway up the screen
         # Calculate scroll position based on time
         scroll_time = pygame.time.get_ticks() // 100  # Slower scroll
-        start_y = 250  # Start from middle of screen instead of bottom
+        start_y = 265  # Start from middle of screen instead of bottom (dropped 15px)
         scroll_offset = (scroll_time % 1000)  # Cycle every 10 seconds
 
-        # Content area
-        content_top = 110
+        # Content area (dropped 15px)
+        content_top = 125  # Was 110, now 125
         line_height = 25
 
-        # Draw header
-        header_text = self.font_small.render("TIME         TEMP  CONDITIONS", True, COLORS['yellow'])
+        # Draw header with proper spacing for alignment
+        header_text = self.font_small.render("TIME        TEMP   CONDITIONS", True, COLORS['yellow'])
         self.screen.blit(header_text, (60, content_top))
 
         # Create clipping region to hide scrolling text outside content area
-        clip_rect = pygame.Rect(0, content_top + 30, SCREEN_WIDTH, 280)
+        clip_rect = pygame.Rect(0, content_top + 30, SCREEN_WIDTH, 265)  # Adjusted height
         self.screen.set_clip(clip_rect)
 
         # Draw hourly periods with scrolling
@@ -1667,8 +1667,9 @@ class WeatherStar4000Complete:
                 # Short forecast
                 short = period.get('shortForecast', '')[:35]
 
-                # Format the line
-                text = f"{time_display}     {temp_display}  {short}"
+                # Format the line with proper spacing to align with headers
+                # TIME (8 chars) + spacing (4) + TEMP (5 chars) + spacing (3) + CONDITIONS
+                text = f"{time_display:8}    {temp_display:5}  {short}"
 
                 # Use appropriate font
                 period_text = self.font_normal.render(text, True, COLORS['white'])
