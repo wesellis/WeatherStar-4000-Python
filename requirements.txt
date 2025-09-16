@@ -1,13 +1,14 @@
-# WeatherStar 4000 Python - Optimized Requirements
+# WeatherStar 4000 Python - Requirements
 # Works on Raspberry Pi 3B+, 4, and Zero 2 W
 
-# Core Requirements (minimal for Pi performance)
-pygame==2.5.2       # Display rendering, audio playback
-requests==2.31.0    # API calls to weather services
+# Core Requirements
+pygame==2.6.0       # Display rendering, audio playback (latest stable)
+requests==2.32.3    # API calls to weather services (security update)
+Pillow==10.4.0      # Image processing for radar (security update)
 
 # Optional but recommended
 ephem>=4.1.0        # Accurate astronomy calculations (sun/moon data)
 
-# Note for Raspberry Pi users:
-# For best performance, install via apt:
-# sudo apt-get install python3-pygame python3-requests
+# Security note: All packages updated to latest secure versions
+# For Raspberry Pi users, you can also install via apt:
+# sudo apt-get install python3-pygame python3-requests python3-pil
