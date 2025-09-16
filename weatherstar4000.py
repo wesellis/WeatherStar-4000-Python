@@ -69,6 +69,8 @@ class DisplayMode(Enum):
     WIND_PRESSURE = "wind-pressure"
     WEEKEND_FORECAST = "weekend-forecast"
     MONTHLY_OUTLOOK = "monthly-outlook"
+    MSN_NEWS = "msn-news"
+    REDDIT_NEWS = "reddit-news"
 
 # Colors from ws4kp SCSS
 COLORS = {
@@ -806,7 +808,8 @@ class WeatherStar4000Complete:
                 'music_volume': 0.3,
                 'show_trends': True,
                 'show_historical': True,
-                'show_news': False
+                'show_msn': False,
+                'show_reddit': False
             }
 
         # Create smaller, compact menu
@@ -851,8 +854,8 @@ class WeatherStar4000Complete:
             ("[4] Music Volume", "volume", self.settings.get('music_volume', 0.3)),
             ("---", None, None),  # Separator
             ("News & Information", "category", None),
-            ("[5] MSN Top Stories", "msn_news", False),
-            ("[6] Reddit Headlines", "reddit_news", False),
+            ("[5] MSN Top Stories", "show_msn", self.settings.get('show_msn', False)),
+            ("[6] Reddit Headlines", "show_reddit", self.settings.get('show_reddit', False)),
             ("---", None, None),  # Separator
             ("System", "category", None),
             ("[R] Refresh Weather", "refresh", None),
@@ -876,7 +879,7 @@ class WeatherStar4000Complete:
                 # Regular menu item with checkbox style
                 item_x = 20
                 # Draw checkbox for toggleable items
-                if setting in ["show_marine", "show_trends", "show_historical", "msn_news", "reddit_news"]:
+                if setting in ["show_marine", "show_trends", "show_historical", "show_msn", "show_reddit"]:
                     # Draw checkbox
                     checkbox = pygame.Rect(item_x, y_pos, 11, 11)
                     pygame.draw.rect(menu_surface, WIN95_LIGHT, checkbox)
@@ -941,13 +944,19 @@ class WeatherStar4000Complete:
                         self.show_context_menu()  # Redraw menu
                         return
                     elif event.key == pygame.K_5:
-                        # Show MSN news
-                        self.show_news_display('msn')
-                        waiting = False
+                        # Toggle MSN news
+                        self.settings['show_msn'] = not self.settings.get('show_msn', False)
+                        self.update_display_list()
+                        logger.main_logger.info(f"MSN news: {self.settings['show_msn']}")
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_6:
-                        # Show Reddit news
-                        self.show_news_display('reddit')
-                        waiting = False
+                        # Toggle Reddit news
+                        self.settings['show_reddit'] = not self.settings.get('show_reddit', False)
+                        self.update_display_list()
+                        logger.main_logger.info(f"Reddit news: {self.settings['show_reddit']}")
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_r:
                         self.get_weather_data()
                         logger.main_logger.info("Weather data refreshed")
@@ -980,15 +989,77 @@ class WeatherStar4000Complete:
             DisplayMode.MONTHLY_OUTLOOK,
         ]
 
-        # Add marine forecast if enabled
+        # Add optional displays based on settings
         if self.settings.get('show_marine', False):
             base_displays.insert(9, DisplayMode.MARINE_FORECAST)
+
+        # Add news displays if enabled
+        if self.settings.get('show_msn', False):
+            base_displays.append(DisplayMode.MSN_NEWS)
+        if self.settings.get('show_reddit', False):
+            base_displays.append(DisplayMode.REDDIT_NEWS)
 
         self.display_list = base_displays
         self.displays = [mode for mode in self.display_list if mode != DisplayMode.PROGRESS]
 
+    def draw_msn_news(self):
+        """Display MSN news headlines"""
+        self.draw_background('1')
+        self.draw_header("MSN", "Top Stories")
+
+        # Fetch MSN headlines (simulated for now)
+        headlines = [
+            "Breaking: Major Weather System Moving Across US",
+            "Tech: Apple Announces New Product Line",
+            "Sports: Championship Game Results",
+            "World: Global Climate Summit Begins",
+            "Business: Stock Market Reaches New High",
+            "Entertainment: Award Show Winners Announced",
+            "Health: New Medical Breakthrough Reported",
+            "Science: Space Mission Successfully Launches"
+        ]
+
+        self._display_news_headlines(headlines)
+        logger.main_logger.debug("Drew MSN news display")
+
+    def draw_reddit_news(self):
+        """Display Reddit news headlines"""
+        self.draw_background('1')
+        self.draw_header("Reddit", "Headlines")
+
+        # Fetch Reddit headlines (simulated for now)
+        headlines = [
+            "r/news: Major Storm System Approaching East Coast",
+            "r/worldnews: International Summit Concludes",
+            "r/technology: New AI Breakthrough Announced",
+            "r/science: Scientists Discover New Species",
+            "r/gaming: Popular Game Gets Major Update",
+            "r/movies: Box Office Records Broken",
+            "r/sports: Underdog Team Wins Championship",
+            "r/space: New Images from Space Telescope"
+        ]
+
+        self._display_news_headlines(headlines)
+        logger.main_logger.debug("Drew Reddit news display")
+
+    def _display_news_headlines(self, headlines):
+        """Helper to display news headlines"""
+        y_pos = 120
+        for i, headline in enumerate(headlines[:10], 1):
+            # Number
+            num_text = self.font_small.render(f"{i}.", True, COLORS['yellow'])
+            self.screen.blit(num_text, (60, y_pos))
+
+            # Headline (truncate if too long)
+            if len(headline) > 60:
+                headline = headline[:57] + "..."
+            headline_text = self.font_small.render(headline, True, COLORS['white'])
+            self.screen.blit(headline_text, (85, y_pos))
+
+            y_pos += 28
+
     def show_news_display(self, source):
-        """Display news headlines from MSN or Reddit"""
+        """Display news headlines from MSN or Reddit (deprecated - use draw_msn_news or draw_reddit_news)"""
         self.draw_background('1')
 
         if source == 'msn':
@@ -2601,6 +2672,10 @@ class WeatherStar4000Complete:
                         self.draw_weekend_forecast()
                     elif current_mode == DisplayMode.MONTHLY_OUTLOOK:
                         self.draw_monthly_outlook()
+                    elif current_mode == DisplayMode.MSN_NEWS:
+                        self.draw_msn_news()
+                    elif current_mode == DisplayMode.REDDIT_NEWS:
+                        self.draw_reddit_news()
                     elif current_mode == DisplayMode.ALMANAC:
                         self.draw_almanac()
                     elif current_mode == DisplayMode.HAZARDS:
