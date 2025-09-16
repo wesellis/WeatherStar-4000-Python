@@ -12,6 +12,10 @@ import shutil
 
 def check_ffmpeg():
     """Check if ffmpeg is installed"""
+    # First check for local ffmpeg binary
+    local_ffmpeg = Path("./ffmpeg")
+    if local_ffmpeg.exists():
+        return True
     try:
         subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
         return True
@@ -75,9 +79,10 @@ def compress_and_rename_music():
         print(f"\nProcessing {i}/{len(music_files)}: {file.name}")
         print(f"  New name: {new_name}")
 
-        # Compress using ffmpeg
+        # Compress using ffmpeg (use local binary if available)
+        ffmpeg_cmd = './ffmpeg' if Path('./ffmpeg').exists() else 'ffmpeg'
         cmd = [
-            'ffmpeg',
+            ffmpeg_cmd,
             '-i', str(file),
             '-b:a', '128k',  # 128kbps bitrate
             '-ar', '44100',   # 44.1kHz sample rate
