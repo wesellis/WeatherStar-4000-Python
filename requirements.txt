@@ -1,0 +1,6 @@
+# Core Requirements
+pygame>=2.5.0       # Display rendering, audio playback
+requests>=2.28.0    # API calls to NOAA weather service
+
+# Optional but recommended
+ephem>=4.1.0        # Accurate astronomy calculations (sun/moon data)
