@@ -1057,7 +1057,7 @@ class WeatherStar4000Complete:
             self.news_vertical_scroll = {}
 
         if source not in self.news_vertical_scroll:
-            self.news_vertical_scroll[source] = 480  # Start from bottom of screen
+            self.news_vertical_scroll[source] = 200  # Start 25% up the screen (was 480)
 
         # Use readable font
         try:
@@ -1080,7 +1080,7 @@ class WeatherStar4000Complete:
 
         for i, headline in enumerate(headlines[:20], 1):  # Show up to 20 headlines
             # Only draw if potentially visible
-            if y_pos > -100 and y_pos < 500:
+            if y_pos > -200 and y_pos < 500:
                 # Number in yellow
                 num_text = title_font.render(f"{i}.", True, COLORS['yellow'])
                 self.screen.blit(num_text, (50, y_pos))
@@ -1107,7 +1107,7 @@ class WeatherStar4000Complete:
                 # Draw wrapped lines
                 line_y = y_pos
                 for line in lines:
-                    if line_y > 80 and line_y < 420:  # Only draw visible lines
+                    if line_y > 95 and line_y < 420:  # Only draw visible lines within clip region
                         text_surface = news_font.render(line, True, COLORS['white'])
                         self.screen.blit(text_surface, (80, line_y))
                     line_y += line_height
@@ -1124,9 +1124,9 @@ class WeatherStar4000Complete:
         # Update scroll position (slow upward scroll)
         self.news_vertical_scroll[source] -= 0.5  # Slow scroll speed
 
-        # Reset when all headlines have scrolled past
-        if y_pos < 80:
-            self.news_vertical_scroll[source] = 480
+        # Reset when all headlines have scrolled past the top
+        if y_pos < 100:
+            self.news_vertical_scroll[source] = 440  # Reset to bottom but visible
 
         # Footer with update time (outside clipping area)
         update_time = datetime.now().strftime("%I:%M %p")
