@@ -369,7 +369,9 @@ class WeatherStar4000Complete:
             'units': 'F',  # F or C
             'music_volume': 0.3,
             'show_trends': True,
-            'show_historical': True
+            'show_historical': True,
+            'show_msn': True,  # Auto-enabled by default
+            'show_reddit': True  # Auto-enabled by default
         }
 
         # Weather trends storage for arrow indicators
@@ -660,6 +662,8 @@ class WeatherStar4000Complete:
             DisplayMode.WIND_PRESSURE,
             DisplayMode.WEEKEND_FORECAST,
             DisplayMode.MONTHLY_OUTLOOK,
+            DisplayMode.MSN_NEWS,  # Auto-enabled by default
+            DisplayMode.REDDIT_NEWS,  # Auto-enabled by default
             DisplayMode.ALMANAC,
             DisplayMode.HAZARDS,
             DisplayMode.RADAR,
