@@ -1071,8 +1071,8 @@ class WeatherStar4000Complete:
             news_font = pygame.font.Font(None, 20)
             title_font = pygame.font.Font(None, 22)
 
-        # Create clipping region for scrolling area (reduced width by 30px total)
-        clip_rect = pygame.Rect(55, 100, 530, 320)  # Was 40, 100, 560, 320
+        # Create clipping region for scrolling area (reduced width by 30px total, height by 15px at bottom)
+        clip_rect = pygame.Rect(55, 100, 530, 305)  # Was 40, 100, 560, 320 - reduced bottom by 15px
         self.screen.set_clip(clip_rect)
 
         # Calculate total height needed for all headlines
@@ -1108,12 +1108,59 @@ class WeatherStar4000Complete:
                 if current_line:
                     lines.append(current_line)
 
-                # Draw wrapped lines
+                # Draw wrapped lines with color coding
                 line_y = y_pos
                 for line in lines:
-                    if line_y > 95 and line_y < 420:  # Only draw visible lines within clip region
-                        text_surface = news_font.render(line, True, COLORS['white'])
-                        self.screen.blit(text_surface, (95, line_y))  # Was 80, now 95 (+15px)
+                    if line_y > 95 and line_y < 405:  # Only draw visible lines within clip region (adjusted for shorter area)
+                        # Check if this is a Reddit headline and color-code subreddits
+                        if source == "reddit" and "/r/" in line:
+                            # Split the line to find and color /r/ mentions
+                            x_pos = 95
+                            parts = line.split()
+                            for part in parts:
+                                if part.startswith("/r/") or part.startswith("r/"):
+                                    # Color subreddit mentions in cyan
+                                    colored_text = news_font.render(part, True, COLORS['cyan'])
+                                    self.screen.blit(colored_text, (x_pos, line_y))
+                                    x_pos += colored_text.get_width() + 5
+                                elif part.startswith("[") and part.endswith("]"):
+                                    # Color bracketed tags in yellow
+                                    colored_text = news_font.render(part, True, COLORS['yellow'])
+                                    self.screen.blit(colored_text, (x_pos, line_y))
+                                    x_pos += colored_text.get_width() + 5
+                                else:
+                                    # Regular white text
+                                    text_part = news_font.render(part, True, COLORS['white'])
+                                    self.screen.blit(text_part, (x_pos, line_y))
+                                    x_pos += text_part.get_width() + 5
+                        else:
+                            # For MSN or non-Reddit content, check for other patterns
+                            if source == "msn" and ("BREAKING:" in line or "UPDATE:" in line):
+                                # Highlight breaking news in red
+                                if "BREAKING:" in line:
+                                    parts = line.split("BREAKING:", 1)
+                                    if len(parts) == 2:
+                                        breaking_text = news_font.render("BREAKING:", True, COLORS['red'])
+                                        self.screen.blit(breaking_text, (95, line_y))
+                                        rest_text = news_font.render(parts[1], True, COLORS['white'])
+                                        self.screen.blit(rest_text, (95 + breaking_text.get_width(), line_y))
+                                    else:
+                                        text_surface = news_font.render(line, True, COLORS['white'])
+                                        self.screen.blit(text_surface, (95, line_y))
+                                elif "UPDATE:" in line:
+                                    parts = line.split("UPDATE:", 1)
+                                    if len(parts) == 2:
+                                        update_text = news_font.render("UPDATE:", True, COLORS['yellow'])
+                                        self.screen.blit(update_text, (95, line_y))
+                                        rest_text = news_font.render(parts[1], True, COLORS['white'])
+                                        self.screen.blit(rest_text, (95 + update_text.get_width(), line_y))
+                                    else:
+                                        text_surface = news_font.render(line, True, COLORS['white'])
+                                        self.screen.blit(text_surface, (95, line_y))
+                            else:
+                                # Regular text
+                                text_surface = news_font.render(line, True, COLORS['white'])
+                                self.screen.blit(text_surface, (95, line_y))
                     line_y += line_height
 
                 # Move to next headline position
