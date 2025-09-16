@@ -434,6 +434,10 @@ class WeatherStar4000Complete:
         self.lat = lat
         self.lon = lon
 
+        # Cache city name for local news (avoid repeated API calls)
+        self.cached_city_name = None
+        self.city_name_cached_at = 0
+
         # Display management
         self.displays = self._init_displays()
         self.current_display_index = 0
@@ -1053,15 +1057,27 @@ class WeatherStar4000Complete:
         self._display_scrolling_headlines(headlines, "msn")
         logger.main_logger.debug("Drew MSN news display")
 
+    def get_cached_city_name(self):
+        """Get city name with caching to avoid repeated API calls"""
+        # Cache for 1 hour (3600 seconds)
+        if self.cached_city_name and (time.time() - self.city_name_cached_at) < 3600:
+            return self.cached_city_name
+
+        # Get fresh city name
+        self.cached_city_name = get_local_news.get_city_name_from_coords(self.lat, self.lon)
+        self.city_name_cached_at = time.time()
+        logger.main_logger.info(f"Updated cached city name: {self.cached_city_name}")
+        return self.cached_city_name
+
     def draw_local_news(self):
         """Display local news headlines"""
         self.draw_background('1')
 
-        # Get location description for header
-        city_name = get_local_news.get_city_name_from_coords(self.lat, self.lon)
+        # Get cached location description for header
+        city_name = self.get_cached_city_name()
         self.draw_header("Local News", city_name)
 
-        # Get local news headlines
+        # Get local news headlines (these are static/simulated so no performance issue)
         headlines = get_local_news.get_local_news_by_location(self.lat, self.lon)
 
         # Display with normal styling
