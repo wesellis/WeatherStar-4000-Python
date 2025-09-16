@@ -1649,8 +1649,8 @@ class WeatherStar4000Complete:
         content_top = 125  # Was 110, now 125
         line_height = 25
 
-        # Draw header with proper spacing for alignment
-        header_text = self.font_small.render("TIME        TEMP   CONDITIONS", True, COLORS['yellow'])
+        # Draw header with proper spacing for alignment (shifted left)
+        header_text = self.font_small.render("TIME      TEMP  CONDITIONS", True, COLORS['yellow'])
         self.screen.blit(header_text, (60, content_top))
 
         # Create clipping region to hide scrolling text outside content area
@@ -1683,8 +1683,8 @@ class WeatherStar4000Complete:
                 short = period.get('shortForecast', '')[:35]
 
                 # Format the line with proper spacing to align with headers
-                # TIME (8 chars) + spacing (4) + TEMP (5 chars) + spacing (3) + CONDITIONS
-                text = f"{time_display:8}    {temp_display:5}  {short}"
+                # Reduced spacing to shift temp and conditions left
+                text = f"{time_display:8}  {temp_display:5}{short}"
 
                 # Use appropriate font
                 period_text = self.font_normal.render(text, True, COLORS['white'])
