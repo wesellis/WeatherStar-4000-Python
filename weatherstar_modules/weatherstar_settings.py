@@ -24,9 +24,9 @@ def load_settings():
             'show_marine': False,
             'show_trends': True,
             'show_historical': True,
-            'show_msn': True,
-            'show_reddit': True,
-            'show_local_news': False,  # Disabled - requires API key for real news
+            'show_msn': False,           # Disabled for 90s authenticity
+            'show_reddit': False,        # Disabled for 90s authenticity
+            'show_local_news': False,    # Disabled - requires API key for real news
             'music_volume': 0.3
         }
     }
