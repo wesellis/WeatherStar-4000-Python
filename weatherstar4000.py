@@ -22,6 +22,7 @@ import webbrowser
 # Import our custom logger
 from weatherstar_logger import init_logger, get_logger
 import weatherstar_settings
+import get_local_news
 
 # Initialize logging
 logger = init_logger()
@@ -73,6 +74,7 @@ class DisplayMode(Enum):
     MONTHLY_OUTLOOK = "monthly-outlook"
     MSN_NEWS = "msn-news"
     REDDIT_NEWS = "reddit-news"
+    LOCAL_NEWS = "local-news"
 
 # Colors from ws4kp SCSS
 COLORS = {
@@ -823,7 +825,8 @@ class WeatherStar4000Complete:
                 'show_trends': True,
                 'show_historical': True,
                 'show_msn': False,
-                'show_reddit': False
+                'show_reddit': False,
+            'show_local_news': True
             }
 
         # Create smaller, compact menu
@@ -870,6 +873,7 @@ class WeatherStar4000Complete:
             ("News & Information", "category", None),
             ("[5] MSN Top Stories", "show_msn", self.settings.get('show_msn', False)),
             ("[6] Reddit Headlines", "show_reddit", self.settings.get('show_reddit', False)),
+            ("[7] Local News", "show_local_news", self.settings.get('show_local_news', True)),
             ("---", None, None),  # Separator
             ("System", "category", None),
             ("[R] Refresh Weather", "refresh", None),
@@ -893,7 +897,7 @@ class WeatherStar4000Complete:
                 # Regular menu item with checkbox style
                 item_x = 20
                 # Draw checkbox for toggleable items
-                if setting in ["show_marine", "show_trends", "show_historical", "show_msn", "show_reddit"]:
+                if setting in ["show_marine", "show_trends", "show_historical", "show_msn", "show_reddit", "show_local_news"]:
                     # Draw checkbox
                     checkbox = pygame.Rect(item_x, y_pos, 11, 11)
                     pygame.draw.rect(menu_surface, WIN95_LIGHT, checkbox)
@@ -971,6 +975,13 @@ class WeatherStar4000Complete:
                         logger.main_logger.info(f"Reddit news: {self.settings['show_reddit']}")
                         self.show_context_menu()  # Redraw menu
                         return
+                    elif event.key == pygame.K_7:
+                        # Toggle Local news
+                        self.settings['show_local_news'] = not self.settings.get('show_local_news', True)
+                        self.update_display_list()
+                        logger.main_logger.info(f"Local news: {self.settings['show_local_news']}")
+                        self.show_context_menu()  # Redraw menu
+                        return
                     elif event.key == pygame.K_r:
                         self.get_weather_data()
                         logger.main_logger.info("Weather data refreshed")
@@ -1012,6 +1023,8 @@ class WeatherStar4000Complete:
             base_displays.append(DisplayMode.MSN_NEWS)
         if self.settings.get('show_reddit', False):
             base_displays.append(DisplayMode.REDDIT_NEWS)
+        if self.settings.get('show_local_news', True):  # Default to True for local news
+            base_displays.append(DisplayMode.LOCAL_NEWS)
 
         self.display_list = base_displays
         self.displays = [mode for mode in self.display_list if mode != DisplayMode.PROGRESS]
@@ -1039,6 +1052,33 @@ class WeatherStar4000Complete:
 
         self._display_scrolling_headlines(headlines, "msn")
         logger.main_logger.debug("Drew MSN news display")
+
+    def draw_local_news(self):
+        """Display local news headlines with red emergency background"""
+        # Draw red emergency background
+        self.screen.fill((139, 0, 0))  # Dark red background
+
+        # Draw header with emergency styling
+        header_rect = pygame.Rect(0, 0, 640, 80)
+        pygame.draw.rect(self.screen, (255, 0, 0), header_rect)  # Bright red header
+
+        # Draw "LOCAL NEWS" text in white
+        header_text = self.header_font.render("LOCAL NEWS", True, (255, 255, 255))
+        text_rect = header_text.get_rect(center=(320, 40))
+        self.screen.blit(header_text, text_rect)
+
+        # Get location description
+        city_name = get_local_news.get_city_name_from_coords(self.lat, self.lon)
+        subtitle_text = self.time_font.render(city_name, True, (255, 255, 255))
+        subtitle_rect = subtitle_text.get_rect(center=(320, 65))
+        self.screen.blit(subtitle_text, subtitle_rect)
+
+        # Get local news headlines
+        headlines = get_local_news.get_local_news_by_location(self.lat, self.lon)
+
+        # Display with emergency styling (white text on red)
+        self._display_scrolling_headlines(headlines, "local_emergency")
+        logger.main_logger.debug("Drew local news display with emergency background")
 
     def draw_reddit_news(self):
         """Display Reddit news headlines with scrolling"""
@@ -1110,8 +1150,12 @@ class WeatherStar4000Complete:
 
             # Only draw if potentially visible
             if y_pos > -200 and y_pos < 500:
-                # Number in yellow (moved in by 15px)
-                num_text = title_font.render(f"{i}.", True, COLORS['yellow'])
+                # Number color based on source
+                if source == "local_emergency":
+                    num_color = (255, 255, 255)  # White for emergency
+                else:
+                    num_color = COLORS['yellow']
+                num_text = title_font.render(f"{i}.", True, num_color)
                 self.screen.blit(num_text, (65, y_pos))  # Was 50, now 65 (+15px)
 
                 # Word-wrap the headline for better readability
@@ -1165,6 +1209,30 @@ class WeatherStar4000Complete:
                                     text_part = news_font.render(part, True, COLORS['white'])
                                     self.screen.blit(text_part, (x_pos, line_y))
                                     x_pos += text_part.get_width() + 5
+                        elif source == "local_emergency":
+                            # For local emergency news, check for special prefixes
+                            if ":" in line:
+                                parts = line.split(":", 1)
+                                if len(parts) == 2:
+                                    category = parts[0]
+                                    # Check for emergency keywords
+                                    if any(word in category.upper() for word in ["EMERGENCY", "BREAKING", "ALERT"]):
+                                        category_text = news_font.render(category + ":", True, COLORS['yellow'])
+                                        self.screen.blit(category_text, (95, line_y))
+                                        rest_text = news_font.render(parts[1], True, (255, 255, 255))
+                                        self.screen.blit(rest_text, (95 + category_text.get_width(), line_y))
+                                    else:
+                                        # Regular local news - all white
+                                        text_surface = news_font.render(line, True, (255, 255, 255))
+                                        self.screen.blit(text_surface, (95, line_y))
+                                else:
+                                    # No colon, just draw in white
+                                    text_surface = news_font.render(line, True, (255, 255, 255))
+                                    self.screen.blit(text_surface, (95, line_y))
+                            else:
+                                # No colon, just draw in white
+                                text_surface = news_font.render(line, True, (255, 255, 255))
+                                self.screen.blit(text_surface, (95, line_y))
                         else:
                             # For MSN or non-Reddit content
                             if source == "msn" and ":" in line:
@@ -2866,6 +2934,8 @@ class WeatherStar4000Complete:
                         self.draw_msn_news()
                     elif current_mode == DisplayMode.REDDIT_NEWS:
                         self.draw_reddit_news()
+                    elif current_mode == DisplayMode.LOCAL_NEWS:
+                        self.draw_local_news()
                     elif current_mode == DisplayMode.ALMANAC:
                         self.draw_almanac()
                     elif current_mode == DisplayMode.HAZARDS:

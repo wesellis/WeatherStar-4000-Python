@@ -26,6 +26,7 @@ def load_settings():
             'show_historical': True,
             'show_msn': True,
             'show_reddit': True,
+            'show_local_news': True,
             'music_volume': 0.3
         }
     }
