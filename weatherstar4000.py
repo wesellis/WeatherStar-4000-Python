@@ -1051,29 +1051,29 @@ class WeatherStar4000Complete:
         logger.main_logger.debug("Drew Reddit news display")
 
     def _display_scrolling_headlines(self, headlines, source):
-        """Display news with smaller font and scrolling for long headlines"""
+        """Display news with scrolling for long headlines"""
         # Initialize scroll positions if not exists
         if not hasattr(self, 'headline_scroll_pos'):
             self.headline_scroll_pos = {}
 
-        # Use extra small font for more content
+        # Use 25% bigger font (was 16, now 20)
         try:
-            # Try to load a smaller font size
-            news_font = pygame.font.Font(self.font_paths.get('small'), 16)
+            # Try to load a font size that's 25% bigger
+            news_font = pygame.font.Font(self.font_paths.get('small'), 20)
         except:
-            news_font = pygame.font.Font(None, 16)  # Fallback to system font
+            news_font = pygame.font.Font(None, 20)  # Fallback to system font
 
         y_pos = 100
-        line_height = 20  # Smaller line height for more headlines
+        line_height = 24  # Adjusted for bigger font
 
-        # Display more headlines with smaller spacing
-        for i, headline in enumerate(headlines[:15], 1):  # Show up to 15 headlines
-            # Number in yellow
+        # Display headlines with adjusted spacing
+        for i, headline in enumerate(headlines[:13], 1):  # Show fewer headlines due to bigger font
+            # Number in yellow (moved in 15px from left)
             if i < 10:
                 num_text = news_font.render(f" {i}.", True, COLORS['yellow'])
             else:
                 num_text = news_font.render(f"{i}.", True, COLORS['yellow'])
-            self.screen.blit(num_text, (45, y_pos))
+            self.screen.blit(num_text, (60, y_pos))  # Was 45, now 60 (+15px)
 
             # Create scrolling effect for long headlines
             headline_key = f"{source}_{i}"
@@ -1084,28 +1084,29 @@ class WeatherStar4000Complete:
             headline_surface = news_font.render(headline, True, COLORS['white'])
             headline_width = headline_surface.get_width()
 
-            # Create clipping area for headline (from x=70 to x=570)
-            clip_rect = pygame.Rect(70, y_pos, 500, line_height)
+            # Create clipping area for headline (shrunk by 15px on each side)
+            # Was x=70 to x=570 (width 500), now x=85 to x=555 (width 470)
+            clip_rect = pygame.Rect(85, y_pos, 470, line_height)
             self.screen.set_clip(clip_rect)
 
             # If headline is too long, scroll it
-            if headline_width > 490:
+            if headline_width > 460:  # Adjusted for new width
                 # Draw scrolling headline
-                x_pos = 70 - self.headline_scroll_pos[headline_key]
+                x_pos = 85 - self.headline_scroll_pos[headline_key]
                 self.screen.blit(headline_surface, (x_pos, y_pos))
 
                 # Also draw a second copy for seamless scrolling
                 self.screen.blit(headline_surface, (x_pos + headline_width + 50, y_pos))
 
-                # Update scroll position (2 pixels per frame)
-                self.headline_scroll_pos[headline_key] += 2
+                # Update scroll position (slower: 1 pixel per frame instead of 2)
+                self.headline_scroll_pos[headline_key] += 1
 
                 # Reset when fully scrolled
                 if self.headline_scroll_pos[headline_key] > headline_width + 50:
                     self.headline_scroll_pos[headline_key] = 0
             else:
                 # Short headline - just display normally
-                self.screen.blit(headline_surface, (70, y_pos))
+                self.screen.blit(headline_surface, (85, y_pos))  # Adjusted x position
 
             # Remove clipping
             self.screen.set_clip(None)
