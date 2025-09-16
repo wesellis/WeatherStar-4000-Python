@@ -1003,47 +1003,123 @@ class WeatherStar4000Complete:
         self.displays = [mode for mode in self.display_list if mode != DisplayMode.PROGRESS]
 
     def draw_msn_news(self):
-        """Display MSN news headlines"""
+        """Display MSN news headlines with scrolling"""
         self.draw_background('1')
         self.draw_header("MSN", "Top Stories")
 
-        # Fetch MSN headlines (simulated for now)
+        # Fetch MSN headlines (simulated for now - in production would fetch real news)
         headlines = [
-            "Breaking: Major Weather System Moving Across US",
-            "Tech: Apple Announces New Product Line",
-            "Sports: Championship Game Results",
-            "World: Global Climate Summit Begins",
-            "Business: Stock Market Reaches New High",
-            "Entertainment: Award Show Winners Announced",
-            "Health: New Medical Breakthrough Reported",
-            "Science: Space Mission Successfully Launches"
+            "Breaking: Major Winter Storm System Moving Across United States Bringing Heavy Snow and Ice",
+            "Technology: Apple Announces Revolutionary New Product Line at Annual Developer Conference",
+            "Sports: Underdog Team Wins Championship in Dramatic Overtime Victory Against All Odds",
+            "World News: Global Climate Summit Concludes with Historic Agreement Among Nations",
+            "Business: Stock Market Reaches All-Time High as Economic Recovery Continues to Accelerate",
+            "Entertainment: Surprise Winners at Annual Award Show Leave Audiences Stunned",
+            "Health: Scientists Announce Major Medical Breakthrough in Cancer Research Treatment",
+            "Science: Space Mission Successfully Launches New Era of Deep Space Exploration",
+            "Politics: Congress Passes Landmark Legislation with Bipartisan Support",
+            "Local: Community Rallies Together to Support Families Affected by Recent Events",
+            "Weather: Hurricane Season Expected to Be More Active Than Normal This Year",
+            "Technology: Artificial Intelligence Breakthrough Could Transform Daily Life"
         ]
 
-        self._display_news_headlines(headlines)
+        self._display_scrolling_headlines(headlines, "msn")
         logger.main_logger.debug("Drew MSN news display")
 
     def draw_reddit_news(self):
-        """Display Reddit news headlines"""
+        """Display Reddit news headlines with scrolling"""
         self.draw_background('1')
         self.draw_header("Reddit", "Headlines")
 
-        # Fetch Reddit headlines (simulated for now)
+        # Fetch Reddit headlines (simulated for now - in production would use Reddit API)
         headlines = [
-            "r/news: Major Storm System Approaching East Coast",
-            "r/worldnews: International Summit Concludes",
-            "r/technology: New AI Breakthrough Announced",
-            "r/science: Scientists Discover New Species",
-            "r/gaming: Popular Game Gets Major Update",
-            "r/movies: Box Office Records Broken",
-            "r/sports: Underdog Team Wins Championship",
-            "r/space: New Images from Space Telescope"
+            "r/news: Major Storm System Approaching East Coast with Potential for Historic Snowfall Amounts",
+            "r/worldnews: International Summit Concludes with Unexpected Alliance Between Former Rivals",
+            "r/technology: New AI Breakthrough Could Revolutionize How We Interact with Computers",
+            "r/science: Scientists Discover New Species in Previously Unexplored Deep Ocean Trench",
+            "r/gaming: Popular Game Franchise Gets Surprise Major Update After Years of Silence",
+            "r/movies: Independent Film Breaks Box Office Records in Limited Release",
+            "r/sports: Underdog Team's Cinderella Story Continues with Another Upset Victory",
+            "r/space: New Images from James Webb Space Telescope Reveal Stunning Cosmic Phenomena",
+            "r/AskReddit: What's the most interesting historical fact you know that sounds fake?",
+            "r/todayilearned: TIL that honey never spoils and archaeologists have found 3000 year old honey",
+            "r/EarthPorn: Sunrise over the Grand Canyon after fresh snowfall [OC] [4032x3024]",
+            "r/dataisbeautiful: [OC] Visualization of global temperature changes over the last century"
         ]
 
-        self._display_news_headlines(headlines)
+        self._display_scrolling_headlines(headlines, "reddit")
         logger.main_logger.debug("Drew Reddit news display")
 
+    def _display_scrolling_headlines(self, headlines, source):
+        """Display news with smaller font and scrolling for long headlines"""
+        # Initialize scroll positions if not exists
+        if not hasattr(self, 'headline_scroll_pos'):
+            self.headline_scroll_pos = {}
+
+        # Use extra small font for more content
+        try:
+            # Try to load a smaller font size
+            news_font = pygame.font.Font(self.font_paths.get('small'), 16)
+        except:
+            news_font = pygame.font.Font(None, 16)  # Fallback to system font
+
+        y_pos = 100
+        line_height = 20  # Smaller line height for more headlines
+
+        # Display more headlines with smaller spacing
+        for i, headline in enumerate(headlines[:15], 1):  # Show up to 15 headlines
+            # Number in yellow
+            if i < 10:
+                num_text = news_font.render(f" {i}.", True, COLORS['yellow'])
+            else:
+                num_text = news_font.render(f"{i}.", True, COLORS['yellow'])
+            self.screen.blit(num_text, (45, y_pos))
+
+            # Create scrolling effect for long headlines
+            headline_key = f"{source}_{i}"
+            if headline_key not in self.headline_scroll_pos:
+                self.headline_scroll_pos[headline_key] = 0
+
+            # Render full headline
+            headline_surface = news_font.render(headline, True, COLORS['white'])
+            headline_width = headline_surface.get_width()
+
+            # Create clipping area for headline (from x=70 to x=570)
+            clip_rect = pygame.Rect(70, y_pos, 500, line_height)
+            self.screen.set_clip(clip_rect)
+
+            # If headline is too long, scroll it
+            if headline_width > 490:
+                # Draw scrolling headline
+                x_pos = 70 - self.headline_scroll_pos[headline_key]
+                self.screen.blit(headline_surface, (x_pos, y_pos))
+
+                # Also draw a second copy for seamless scrolling
+                self.screen.blit(headline_surface, (x_pos + headline_width + 50, y_pos))
+
+                # Update scroll position (2 pixels per frame)
+                self.headline_scroll_pos[headline_key] += 2
+
+                # Reset when fully scrolled
+                if self.headline_scroll_pos[headline_key] > headline_width + 50:
+                    self.headline_scroll_pos[headline_key] = 0
+            else:
+                # Short headline - just display normally
+                self.screen.blit(headline_surface, (70, y_pos))
+
+            # Remove clipping
+            self.screen.set_clip(None)
+
+            y_pos += line_height
+
+        # Footer with update time
+        update_time = datetime.now().strftime("%I:%M %p")
+        footer = news_font.render(f"Updated: {update_time}", True, COLORS['yellow'])
+        footer_rect = footer.get_rect(center=(320, 440))
+        self.screen.blit(footer, footer_rect)
+
     def _display_news_headlines(self, headlines):
-        """Helper to display news headlines"""
+        """Legacy helper to display news headlines (deprecated)"""
         y_pos = 120
         for i, headline in enumerate(headlines[:10], 1):
             # Number
