@@ -19,10 +19,10 @@ import random
 import logging
 import webbrowser
 
-# Import our custom logger
-from weatherstar_logger import init_logger, get_logger
-import weatherstar_settings
-import get_local_news
+# Import our custom modules
+from weatherstar_modules.weatherstar_logger import init_logger, get_logger
+from weatherstar_modules import weatherstar_settings
+from weatherstar_modules import get_local_news
 
 # Initialize logging
 logger = init_logger()
