@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple
 import math
 import random
 import logging
+import webbrowser
 
 # Import our custom logger
 from weatherstar_logger import init_logger, get_logger
@@ -1020,20 +1021,20 @@ class WeatherStar4000Complete:
         self.draw_background('1')
         self.draw_header("MSN", "Top Stories")
 
-        # Fetch MSN headlines (simulated for now - in production would fetch real news)
+        # Fetch MSN headlines with URLs (simulated for now - in production would fetch real news)
         headlines = [
-            "Breaking: Major Winter Storm System Moving Across United States Bringing Heavy Snow and Ice",
-            "Technology: Apple Announces Revolutionary New Product Line at Annual Developer Conference",
-            "Sports: Underdog Team Wins Championship in Dramatic Overtime Victory Against All Odds",
-            "World News: Global Climate Summit Concludes with Historic Agreement Among Nations",
-            "Business: Stock Market Reaches All-Time High as Economic Recovery Continues to Accelerate",
-            "Entertainment: Surprise Winners at Annual Award Show Leave Audiences Stunned",
-            "Health: Scientists Announce Major Medical Breakthrough in Cancer Research Treatment",
-            "Science: Space Mission Successfully Launches New Era of Deep Space Exploration",
-            "Politics: Congress Passes Landmark Legislation with Bipartisan Support",
-            "Local: Community Rallies Together to Support Families Affected by Recent Events",
-            "Weather: Hurricane Season Expected to Be More Active Than Normal This Year",
-            "Technology: Artificial Intelligence Breakthrough Could Transform Daily Life"
+            ("Breaking: Major Winter Storm System Moving Across United States Bringing Heavy Snow and Ice", "https://www.msn.com/weather"),
+            ("Technology: Apple Announces Revolutionary New Product Line at Annual Developer Conference", "https://www.msn.com/technology"),
+            ("Sports: Underdog Team Wins Championship in Dramatic Overtime Victory Against All Odds", "https://www.msn.com/sports"),
+            ("World News: Global Climate Summit Concludes with Historic Agreement Among Nations", "https://www.msn.com/world"),
+            ("Business: Stock Market Reaches All-Time High as Economic Recovery Continues to Accelerate", "https://www.msn.com/money"),
+            ("Entertainment: Surprise Winners at Annual Award Show Leave Audiences Stunned", "https://www.msn.com/entertainment"),
+            ("Health: Scientists Announce Major Medical Breakthrough in Cancer Research Treatment", "https://www.msn.com/health"),
+            ("Science: Space Mission Successfully Launches New Era of Deep Space Exploration", "https://www.msn.com/news/technology"),
+            ("Politics: Congress Passes Landmark Legislation with Bipartisan Support", "https://www.msn.com/politics"),
+            ("Local: Community Rallies Together to Support Families Affected by Recent Events", "https://www.msn.com/local"),
+            ("Weather: Hurricane Season Expected to Be More Active Than Normal This Year", "https://www.weather.com"),
+            ("Technology: Artificial Intelligence Breakthrough Could Transform Daily Life", "https://www.msn.com/technology")
         ]
 
         self._display_scrolling_headlines(headlines, "msn")
@@ -1044,20 +1045,20 @@ class WeatherStar4000Complete:
         self.draw_background('1')
         self.draw_header("Reddit", "Headlines")
 
-        # Fetch Reddit headlines (simulated for now - in production would use Reddit API)
+        # Fetch Reddit headlines with URLs (simulated for now - in production would use Reddit API)
         headlines = [
-            "r/news: Major Storm System Approaching East Coast with Potential for Historic Snowfall Amounts",
-            "r/worldnews: International Summit Concludes with Unexpected Alliance Between Former Rivals",
-            "r/technology: New AI Breakthrough Could Revolutionize How We Interact with Computers",
-            "r/science: Scientists Discover New Species in Previously Unexplored Deep Ocean Trench",
-            "r/gaming: Popular Game Franchise Gets Surprise Major Update After Years of Silence",
-            "r/movies: Independent Film Breaks Box Office Records in Limited Release",
-            "r/sports: Underdog Team's Cinderella Story Continues with Another Upset Victory",
-            "r/space: New Images from James Webb Space Telescope Reveal Stunning Cosmic Phenomena",
-            "r/AskReddit: What's the most interesting historical fact you know that sounds fake?",
-            "r/todayilearned: TIL that honey never spoils and archaeologists have found 3000 year old honey",
-            "r/EarthPorn: Sunrise over the Grand Canyon after fresh snowfall [OC] [4032x3024]",
-            "r/dataisbeautiful: [OC] Visualization of global temperature changes over the last century"
+            ("r/news: Major Storm System Approaching East Coast with Potential for Historic Snowfall Amounts", "https://reddit.com/r/news"),
+            ("r/worldnews: International Summit Concludes with Unexpected Alliance Between Former Rivals", "https://reddit.com/r/worldnews"),
+            ("r/technology: New AI Breakthrough Could Revolutionize How We Interact with Computers", "https://reddit.com/r/technology"),
+            ("r/science: Scientists Discover New Species in Previously Unexplored Deep Ocean Trench", "https://reddit.com/r/science"),
+            ("r/gaming: Popular Game Franchise Gets Surprise Major Update After Years of Silence", "https://reddit.com/r/gaming"),
+            ("r/movies: Independent Film Breaks Box Office Records in Limited Release", "https://reddit.com/r/movies"),
+            ("r/sports: Underdog Team's Cinderella Story Continues with Another Upset Victory", "https://reddit.com/r/sports"),
+            ("r/space: New Images from James Webb Space Telescope Reveal Stunning Cosmic Phenomena", "https://reddit.com/r/space"),
+            ("r/AskReddit: What's the most interesting historical fact you know that sounds fake?", "https://reddit.com/r/AskReddit"),
+            ("r/todayilearned: TIL that honey never spoils and archaeologists have found 3000 year old honey", "https://reddit.com/r/todayilearned"),
+            ("r/EarthPorn: Sunrise over the Grand Canyon after fresh snowfall [OC] [4032x3024]", "https://reddit.com/r/EarthPorn"),
+            ("r/dataisbeautiful: [OC] Visualization of global temperature changes over the last century", "https://reddit.com/r/dataisbeautiful")
         ]
 
         self._display_scrolling_headlines(headlines, "reddit")
@@ -1068,6 +1069,13 @@ class WeatherStar4000Complete:
         # Initialize vertical scroll position if not exists
         if not hasattr(self, 'news_vertical_scroll'):
             self.news_vertical_scroll = {}
+
+        # Initialize clickable areas tracking
+        if not hasattr(self, 'clickable_headlines'):
+            self.clickable_headlines = []
+
+        # Clear clickable areas for this frame
+        self.clickable_headlines = []
 
         if source not in self.news_vertical_scroll:
             self.news_vertical_scroll[source] = 200  # Start 25% up the screen (was 480)
@@ -1091,7 +1099,15 @@ class WeatherStar4000Complete:
         # Draw headlines scrolling up
         y_pos = self.news_vertical_scroll[source]
 
-        for i, headline in enumerate(headlines[:20], 1):  # Show up to 20 headlines
+        for i, headline_data in enumerate(headlines[:20], 1):  # Show up to 20 headlines
+            # Extract text and URL from tuple
+            if isinstance(headline_data, tuple):
+                headline_text, headline_url = headline_data
+            else:
+                # Fallback for old format
+                headline_text = headline_data
+                headline_url = None
+
             # Only draw if potentially visible
             if y_pos > -200 and y_pos < 500:
                 # Number in yellow (moved in by 15px)
@@ -1099,7 +1115,7 @@ class WeatherStar4000Complete:
                 self.screen.blit(num_text, (65, y_pos))  # Was 50, now 65 (+15px)
 
                 # Word-wrap the headline for better readability
-                words = headline.split()
+                words = headline_text.split()
                 lines = []
                 current_line = ""
 
@@ -1116,6 +1132,13 @@ class WeatherStar4000Complete:
 
                 if current_line:
                     lines.append(current_line)
+
+                # Track the clickable area if URL is available
+                if headline_url and y_pos > 100 and y_pos < 398:
+                    # Calculate bounding box for this headline
+                    headline_height = len(lines) * line_height
+                    clickable_rect = pygame.Rect(65, y_pos, 520, headline_height)
+                    self.clickable_headlines.append((clickable_rect, headline_url))
 
                 # Draw wrapped lines with color coding
                 line_y = y_pos
@@ -2769,6 +2792,15 @@ class WeatherStar4000Complete:
                         if event.button == 3:  # Right click
                             logger.main_logger.info("Right-click menu opened")
                             self.show_context_menu()
+                        elif event.button == 1:  # Left click
+                            # Check if clicking on a news headline
+                            if hasattr(self, 'clickable_headlines'):
+                                mouse_pos = event.pos
+                                for rect, url in self.clickable_headlines:
+                                    if rect.collidepoint(mouse_pos):
+                                        logger.main_logger.info(f"Opening URL: {url}")
+                                        webbrowser.open(url)
+                                        break
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             logger.main_logger.info("Escape key pressed")
