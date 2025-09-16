@@ -1,0 +1,183 @@
+name: Build Windows Executable
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install pygame
+        pip install pillow
+        pip install requests
+
+    - name: Create version info
+      run: |
+        @"
+        VSVersionInfo(
+          ffi=FixedFileInfo(
+            filevers=(1, 0, 0, 0),
+            prodvers=(1, 0, 0, 0),
+            mask=0x3f,
+            flags=0x0,
+            OS=0x40004,
+            fileType=0x1,
+            subtype=0x0,
+            date=(0, 0)
+          ),
+          kids=[
+            StringFileInfo(
+              [
+              StringTable(
+                '040904B0',
+                [StringStruct('CompanyName', 'WeatherStar 4000 Project'),
+                StringStruct('FileDescription', 'WeatherStar 4000 - 1990s Weather Channel Recreation'),
+                StringStruct('FileVersion', '1.0.0.0'),
+                StringStruct('InternalName', 'WeatherStar4000'),
+                StringStruct('LegalCopyright', 'MIT License 2025'),
+                StringStruct('OriginalFilename', 'WeatherStar4000.exe'),
+                StringStruct('ProductName', 'WeatherStar 4000'),
+                StringStruct('ProductVersion', '1.0.0.0')])
+              ]),
+            VarFileInfo([VarStruct('Translation', [1033, 1200])])
+          ]
+        )
+        "@ | Out-File -FilePath version_info.txt -Encoding ASCII
+
+    - name: Create application icon
+      run: |
+        # Create a simple icon if it doesn't exist
+        if (!(Test-Path "weatherstar_assets/logos/icon.ico")) {
+          Write-Host "Icon not found, will use default"
+        }
+
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller weatherstar4000.spec
+
+    - name: Create portable package
+      run: |
+        # Create distribution folder
+        New-Item -ItemType Directory -Force -Path "WeatherStar4000-Windows"
+
+        # Copy executable
+        Copy-Item "dist/WeatherStar4000.exe" -Destination "WeatherStar4000-Windows/"
+
+        # Create README for Windows users
+        @"
+        WeatherStar 4000 for Windows
+        ============================
+
+        The authentic 1990s Weather Channel experience on your PC!
+
+        QUICK START:
+        1. Double-click WeatherStar4000.exe to launch
+        2. The application will auto-detect your location
+        3. Press 'S' to open settings
+        4. Press 'F' for fullscreen mode
+
+        CONTROLS:
+        - SPACE: Pause/Resume rotation
+        - LEFT/RIGHT: Manual navigation
+        - S: Settings menu
+        - M: Mute/Unmute music
+        - F: Toggle fullscreen
+        - R: Refresh weather data
+        - ESC: Exit application
+
+        FEATURES:
+        - Real NOAA weather data
+        - 75+ smooth jazz tracks
+        - Animated weather icons
+        - Emergency weather alerts
+        - News headlines (MSN, Reddit)
+        - Authentic 90s graphics
+
+        REQUIREMENTS:
+        - Windows 10/11 (64-bit)
+        - Internet connection
+        - 500MB disk space
+        - Audio output for music
+
+        TROUBLESHOOTING:
+        - If the app doesn't start, install Visual C++ Redistributable
+        - For display issues, try compatibility mode (Windows 7)
+        - Settings saved in: %APPDATA%\.weatherstar4000_settings.json
+
+        Enjoy the nostalgia!
+        "@ | Out-File -FilePath "WeatherStar4000-Windows/README.txt" -Encoding UTF8
+
+        # Create batch file launcher with options
+        @"
+        @echo off
+        title WeatherStar 4000
+        echo ============================================
+        echo     WeatherStar 4000 - Windows Edition
+        echo ============================================
+        echo.
+        echo Starting WeatherStar 4000...
+        echo.
+        echo Press Ctrl+C to stop the application
+        echo.
+        start WeatherStar4000.exe
+        "@ | Out-File -FilePath "WeatherStar4000-Windows/Start_WeatherStar.bat" -Encoding ASCII
+
+    - name: Create ZIP archive
+      run: |
+        Compress-Archive -Path "WeatherStar4000-Windows/*" -DestinationPath "WeatherStar4000-Windows-v1.0.zip"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: weatherstar4000-windows
+        path: WeatherStar4000-Windows-v1.0.zip
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: WeatherStar4000-Windows-v1.0.zip
+        body: |
+          # WeatherStar 4000 - Windows Release
+
+          ## 🎯 Installation
+          1. Download `WeatherStar4000-Windows-v1.0.zip`
+          2. Extract to any folder
+          3. Double-click `WeatherStar4000.exe` or `Start_WeatherStar.bat`
+
+          ## 💻 System Requirements
+          - Windows 10/11 (64-bit)
+          - 500MB free disk space
+          - Internet connection
+          - Audio output for music
+
+          ## 🎮 Controls
+          - **SPACE** - Pause/Resume
+          - **F** - Fullscreen
+          - **S** - Settings
+          - **M** - Mute music
+          - **ESC** - Exit
+
+          ## ✨ Features
+          - Self-contained executable (no Python needed)
+          - All assets included
+          - Auto-detects location
+          - 75+ music tracks
+          - Real weather data
+          - Emergency alerts

@@ -26,7 +26,7 @@ def load_settings():
             'show_historical': True,
             'show_msn': True,
             'show_reddit': True,
-            'show_local_news': True,
+            'show_local_news': False,  # Disabled - requires API key for real news
             'music_volume': 0.3
         }
     }

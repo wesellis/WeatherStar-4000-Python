@@ -1,0 +1,292 @@
+name: Build Raspberry Pi Image
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Image name (e.g., weatherstar4000_v1.0)'
+        required: true
+        default: 'weatherstar4000_v1.0'
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build WeatherStar 4000 Raspberry Pi Image
+      uses: dtcooper/rpi-image-modifier@v1
+      with:
+        # Use Raspberry Pi OS Lite as base (latest Bookworm)
+        base-image-url: https://downloads.raspberrypi.com/raspios_lite_armhf/images/raspios_lite_armhf-2024-03-15/2024-03-15-raspios-bookworm-armhf-lite.img.xz
+
+        # Mount our repository into the image
+        mount-repository: true
+
+        # Script to run inside the image to set everything up
+        script: |
+          #!/bin/bash
+          set -e
+
+          echo "================================================"
+          echo "Building WeatherStar 4000 Raspberry Pi Image"
+          echo "================================================"
+
+          # Update system
+          apt-get update
+          apt-get upgrade -y
+
+          # Install required packages
+          apt-get install -y \
+            python3-pip \
+            python3-pygame \
+            python3-pil \
+            python3-requests \
+            git \
+            python3-venv \
+            xserver-xorg \
+            xinit \
+            x11-xserver-utils
+
+          # Create weatherstar user
+          useradd -m -s /bin/bash weatherstar || true
+          usermod -aG video,audio weatherstar
+          echo "weatherstar:weatherstar" | chpasswd
+
+          # Copy WeatherStar files
+          mkdir -p /home/weatherstar/WeatherStar4000
+          cp -r /github/workspace/* /home/weatherstar/WeatherStar4000/
+          chown -R weatherstar:weatherstar /home/weatherstar/WeatherStar4000
+
+          # Install Python dependencies
+          su - weatherstar -c "cd /home/weatherstar/WeatherStar4000 && python3 -m venv venv"
+          su - weatherstar -c "cd /home/weatherstar/WeatherStar4000 && venv/bin/pip install pygame pillow requests"
+
+          # Configure CRT TV output
+          cat >> /boot/config.txt << 'EOF'
+
+          # WeatherStar 4000 CRT TV Configuration
+          hdmi_force_hotplug=0
+          hdmi_ignore_hotplug=1
+          sdtv_mode=0
+          sdtv_aspect=1
+          framebuffer_width=640
+          framebuffer_height=480
+          disable_overscan=0
+          overscan_left=20
+          overscan_right=20
+          overscan_top=10
+          overscan_bottom=10
+          gpu_mem=128
+          hdmi_blanking=0
+          EOF
+
+          # Create auto-start script
+          cat > /home/weatherstar/start_weatherstar.sh << 'EOF'
+          #!/bin/bash
+          sleep 10
+          export DISPLAY=:0
+          xset s noblank
+          xset s off
+          xset -dpms
+          cd /home/weatherstar/WeatherStar4000
+          /home/weatherstar/WeatherStar4000/venv/bin/python weatherstar4000.py
+          sleep 5
+          exec "$0"
+          EOF
+
+          chmod +x /home/weatherstar/start_weatherstar.sh
+          chown weatherstar:weatherstar /home/weatherstar/start_weatherstar.sh
+
+          # Create systemd service
+          cat > /etc/systemd/system/weatherstar.service << 'EOF'
+          [Unit]
+          Description=WeatherStar 4000 Weather Display
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=simple
+          User=weatherstar
+          Group=weatherstar
+          WorkingDirectory=/home/weatherstar/WeatherStar4000
+          Environment="DISPLAY=:0"
+          ExecStart=/home/weatherstar/start_weatherstar.sh
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          # Enable service
+          systemctl daemon-reload
+          systemctl enable weatherstar.service
+
+          # Configure auto-login
+          mkdir -p /etc/systemd/system/getty@tty1.service.d/
+          cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << 'EOF'
+          [Service]
+          ExecStart=
+          ExecStart=-/sbin/agetty --autologin weatherstar --noclear %I $TERM
+          EOF
+
+          # Auto-start X on login
+          cat >> /home/weatherstar/.bash_profile << 'EOF'
+          if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+              exec startx
+          fi
+          EOF
+
+          # Create X11 config
+          cat > /home/weatherstar/.xinitrc << 'EOF'
+          #!/bin/sh
+          exec /home/weatherstar/start_weatherstar.sh
+          EOF
+
+          chmod +x /home/weatherstar/.xinitrc
+          chown weatherstar:weatherstar /home/weatherstar/.xinitrc
+          chown weatherstar:weatherstar /home/weatherstar/.bash_profile
+
+          # Create WiFi setup helper
+          cat > /home/weatherstar/setup_wifi.sh << 'EOF'
+          #!/bin/bash
+          echo "WeatherStar 4000 WiFi Setup"
+          echo "=========================="
+          read -p "Enter WiFi network name (SSID): " SSID
+          read -s -p "Enter WiFi password: " PASSWORD
+          echo ""
+
+          sudo tee /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null <<EOC
+          ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+          update_config=1
+          country=US
+
+          network={
+              ssid="$SSID"
+              psk="$PASSWORD"
+              key_mgmt=WPA-PSK
+          }
+          EOC
+
+          echo "WiFi configured for network: $SSID"
+          sudo systemctl restart networking
+          sudo systemctl restart wpa_supplicant
+          EOF
+
+          chmod +x /home/weatherstar/setup_wifi.sh
+          chown weatherstar:weatherstar /home/weatherstar/setup_wifi.sh
+
+          # Create first-run setup
+          cat > /home/weatherstar/first_run.sh << 'EOF'
+          #!/bin/bash
+          echo "========================================="
+          echo "    WeatherStar 4000 First Run Setup"
+          echo "========================================="
+          echo ""
+          echo "Welcome! Let's configure your location."
+          echo ""
+
+          if ! ping -c 1 google.com &> /dev/null; then
+              echo "No internet connection detected."
+              echo "Please run: ~/setup_wifi.sh to configure WiFi"
+              exit 1
+          fi
+
+          read -p "Enter your ZIP code or city name: " LOCATION
+
+          cat > ~/.weatherstar4000_settings.json <<EOC
+          {
+            "location": {
+              "auto_detect": false,
+              "description": "$LOCATION"
+            },
+            "display": {
+              "show_marine": false,
+              "show_trends": true,
+              "show_historical": true,
+              "show_msn": true,
+              "show_reddit": true,
+              "show_local_news": false,
+              "music_volume": 0.3
+            }
+          }
+          EOC
+
+          echo "Location set to: $LOCATION"
+          echo ""
+          echo "WeatherStar 4000 is now configured!"
+          echo "It will start automatically on next boot."
+          echo ""
+          read -p "Press Enter to reboot now, or Ctrl+C to exit..."
+          sudo reboot
+          EOF
+
+          chmod +x /home/weatherstar/first_run.sh
+          chown weatherstar:weatherstar /home/weatherstar/first_run.sh
+
+          # Clean up for distribution
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+          rm -rf /tmp/*
+          rm -rf /var/tmp/*
+
+          echo "================================================"
+          echo "WeatherStar 4000 Image Build Complete!"
+          echo "================================================"
+
+    - name: Compress image
+      run: |
+        # Find the modified image
+        IMAGE_FILE=$(find . -name "*.img" -type f | head -1)
+        if [ -n "$IMAGE_FILE" ]; then
+          echo "Compressing $IMAGE_FILE..."
+          gzip -9 "$IMAGE_FILE"
+          echo "IMAGE_NAME=$(basename $IMAGE_FILE.gz)" >> $GITHUB_ENV
+        fi
+
+    - name: Upload image as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: weatherstar4000-pi-image
+        path: "*.img.gz"
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: "*.img.gz"
+        body: |
+          # WeatherStar 4000 Raspberry Pi Image
+
+          ## Installation
+          1. Download the image file
+          2. Flash to SD card (8GB minimum) using Raspberry Pi Imager or Balena Etcher
+          3. Insert SD card and boot your Raspberry Pi
+          4. Connect to CRT TV using composite video cable
+          5. Run `~/setup_wifi.sh` to configure WiFi
+          6. Run `~/first_run.sh` to set your location
+
+          ## Default Credentials
+          - Username: weatherstar
+          - Password: weatherstar
+
+          ## Features
+          - Auto-starts on boot
+          - Optimized for CRT TVs (640x480)
+          - All dependencies pre-installed
+          - 75+ smooth jazz tracks included
+          - Animated weather icons
+          - Emergency weather alerts
+
+          ## Supported Hardware
+          - Raspberry Pi 3B+
+          - Raspberry Pi 4
+          - Raspberry Pi Zero 2W
+        draft: false
+        prerelease: false

@@ -23,6 +23,7 @@ import webbrowser
 from weatherstar_modules.weatherstar_logger import init_logger, get_logger
 from weatherstar_modules import weatherstar_settings
 from weatherstar_modules import get_local_news
+from weatherstar_modules.animated_icons import AnimatedIconManager
 
 # Initialize logging
 logger = init_logger()
@@ -411,6 +412,7 @@ class WeatherStar4000Complete:
 
         self.backgrounds = self._load_backgrounds()
         self.icons = {}
+        self.icon_manager = None  # Will be initialized in _load_icons
         self._load_icons()
         self.logos = self._load_logos()
 
@@ -499,15 +501,25 @@ class WeatherStar4000Complete:
         return surf
 
     def _load_icons(self):
-        """Load weather icons"""
+        """Load weather icons with animation support"""
         icons_path = self.assets_path / "icons"
         logger.main_logger.info(f"Loading icons from {icons_path}")
 
+        # Initialize animated icon manager
+        try:
+            self.icon_manager = AnimatedIconManager(str(icons_path))
+            logger.main_logger.info("Animated icon manager initialized")
+        except Exception as e:
+            logger.log_error("Failed to initialize animated icon manager", e)
+            self.icon_manager = None
+
+        # Fallback: Load static versions for compatibility
         if icons_path.exists():
             icon_count = 0
             for icon_file in icons_path.glob("*.gif"):
                 try:
                     name = icon_file.stem
+                    # Load as static image for backwards compatibility
                     self.icons[name] = pygame.image.load(str(icon_file))
                     logger.log_asset_load("icon", name, True)
                     icon_count += 1
@@ -515,7 +527,7 @@ class WeatherStar4000Complete:
                     logger.log_asset_load("icon", str(icon_file), False)
                     logger.log_error(f"Error loading icon {icon_file}", e)
 
-            logger.main_logger.info(f"Loaded {icon_count} icons")
+            logger.main_logger.info(f"Loaded {icon_count} static icons as fallback")
         else:
             logger.main_logger.warning(f"Icons path not found: {icons_path}")
 
@@ -567,9 +579,11 @@ class WeatherStar4000Complete:
                 self.font_title = pygame.font.Font(str(star4000_path), 32)
                 self.font_large = pygame.font.Font(str(star4000_large_path), 32)
                 self.font_extended = pygame.font.Font(str(star4000_extended_path), 32)
-                self.font_small = pygame.font.Font(str(star4000_small_path), 32)
+                self.font_small = pygame.font.Font(str(star4000_small_path), 28)  # Reduced from 32 for Local Forecast
                 self.font_normal = pygame.font.Font(str(star4000_path), 20)
                 self.font_scroller = pygame.font.Font(str(star4000_extended_path), 24)  # Sized to fit in banner
+                self.font_forecast = pygame.font.Font(str(star4000_small_path), 24)  # Smaller for Local Forecast text
+                self.font_tiny = pygame.font.Font(str(star4000_path), 16)  # Tiny font for compact displays
                 logger.main_logger.info("Star4000 fonts loaded successfully")
                 return
             except Exception as e:
@@ -592,7 +606,9 @@ class WeatherStar4000Complete:
             self.font_large = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 32)  # Star4000 Large
             self.font_extended = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 32)  # Star4000 Extended
             self.font_normal = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 20)  # For data
-            self.font_small = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 32)  # Star4000 Small
+            self.font_small = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 28)  # Star4000 Small - reduced
+            self.font_forecast = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 24)  # For Local Forecast
+            self.font_tiny = pygame.font.Font(pygame.font.match_font(selected_font, bold=False), 16)  # Tiny font
             self.font_scroller = pygame.font.Font(pygame.font.match_font(selected_font, bold=True), 24)  # Sized to fit in banner
             logger.main_logger.debug(f"Fonts initialized with {selected_font}")
         else:
@@ -601,7 +617,9 @@ class WeatherStar4000Complete:
             self.font_large = pygame.font.Font(None, 32)
             self.font_extended = pygame.font.Font(None, 32)
             self.font_normal = pygame.font.Font(None, 20)
-            self.font_small = pygame.font.Font(None, 32)
+            self.font_small = pygame.font.Font(None, 28)
+            self.font_forecast = pygame.font.Font(None, 24)  # For Local Forecast
+            self.font_tiny = pygame.font.Font(None, 16)  # Tiny font
             self.font_scroller = pygame.font.Font(None, 24)  # Sized to fit in banner
 
     def _init_music(self):
@@ -771,6 +789,10 @@ class WeatherStar4000Complete:
         if hourly_forecast:
             self.weather_data['hourly'] = hourly_forecast.get('properties', {})
             logger.main_logger.info("Hourly forecast updated")
+
+        # Preload radar image to prevent stuttering
+        logger.main_logger.info("Preloading radar image...")
+        self.fetch_radar_image()
 
     def draw_background(self, bg_name='1'):
         """Draw background image"""
@@ -1027,7 +1049,9 @@ class WeatherStar4000Complete:
             base_displays.append(DisplayMode.MSN_NEWS)
         if self.settings.get('show_reddit', False):
             base_displays.append(DisplayMode.REDDIT_NEWS)
-        if self.settings.get('show_local_news', True):  # Default to True for local news
+        # Local news disabled by default - can't get real local news without API key
+        # Enable in settings if you want simulated local news
+        if self.settings.get('show_local_news', False):  # Default to False
             base_displays.append(DisplayMode.LOCAL_NEWS)
 
         self.display_list = base_displays
@@ -1073,12 +1097,25 @@ class WeatherStar4000Complete:
         """Display local news headlines"""
         self.draw_background('1')
 
-        # Get cached location description for header
-        city_name = self.get_cached_city_name()
-        self.draw_header("Local News", city_name)
+        # Draw header without city name
+        self.draw_header("Local News")
 
-        # Get local news headlines (these are static/simulated so no performance issue)
-        headlines = get_local_news.get_local_news_by_location(self.lat, self.lon)
+        # Draw city name with appropriately sized font
+        city_name = self.get_cached_city_name()
+        # Use normal font for city name (readable size)
+        city_text = self.font_normal.render(city_name.upper(), True, COLORS['yellow'])
+        # Center it below LOCAL NEWS
+        city_rect = city_text.get_rect(centerx=320, y=65)
+        self.screen.blit(city_text, city_rect)
+
+        # Get local news headlines - try real news first, fallback to simulated
+        try:
+            from weatherstar_modules import get_local_news_real
+            headlines = get_local_news_real.get_local_news_by_location(self.lat, self.lon)
+        except Exception as e:
+            # Fallback to simulated news if real news fails
+            logger.main_logger.debug(f"Using simulated news: {e}")
+            headlines = get_local_news.get_local_news_by_location(self.lat, self.lon)
 
         # Display with normal styling
         self._display_scrolling_headlines(headlines, "local")
@@ -1414,10 +1451,19 @@ class WeatherStar4000Complete:
             desc_rect = desc_text.get_rect(center=(left_col_center, 190))
             self.screen.blit(desc_text, desc_rect)
 
-        # Weather icon (centered below condition)
+        # Weather icon (centered below condition) with animation support
         icon_name = self._get_icon_name(current.get('icon', ''))
-        if icon_name and icon_name in self.icons:
+        icon = None
+
+        # Try animated icon first
+        if self.icon_manager:
+            icon = self.icon_manager.get_icon(icon_name, 86, 75)  # Standard icon size
+
+        # Fallback to static icon
+        if not icon and icon_name and icon_name in self.icons:
             icon = self.icons[icon_name]
+
+        if icon:
             icon_rect = icon.get_rect(center=(left_col_center, 260))
             self.screen.blit(icon, icon_rect)
 
@@ -1430,19 +1476,22 @@ class WeatherStar4000Complete:
         wind_label = self.font_extended.render("Wind:", True, COLORS['white'])
         self.screen.blit(wind_label, (content_left + 10, wind_y))  # margin-left: 10px
 
-        if wind_speed is not None:
-            if wind_speed == 0:
-                wind_str = "Calm"
-            else:
-                wind_mph = int(wind_speed * 0.621371)
-                direction = self._get_wind_direction(wind_dir) if wind_dir else ''
-                # Format like ws4kp: direction padded to 3, speed right-aligned to 3
-                wind_str = f"{direction.ljust(3)}{str(wind_mph).rjust(3)}"
+        # Always show wind info, even if None
+        if wind_speed is not None and wind_speed > 0:
+            wind_mph = int(wind_speed * 0.621371)
+            direction = self._get_wind_direction(wind_dir) if wind_dir else ''
+            # Format like ws4kp: direction padded to 3, speed right-aligned to 3
+            wind_str = f"{direction.ljust(3)}{str(wind_mph).rjust(3)}"
+        elif wind_speed is not None and wind_speed == 0:
+            wind_str = "Calm"
+        else:
+            # Show "N/A" if no wind data available
+            wind_str = "N/A"
 
-            wind_text = self.font_extended.render(wind_str, True, COLORS['white'])
-            # Right side of flex container
-            wind_rect = wind_text.get_rect(right=content_left + 245, y=wind_y)
-            self.screen.blit(wind_text, wind_rect)
+        wind_text = self.font_extended.render(wind_str, True, COLORS['white'])
+        # Right side of flex container
+        wind_rect = wind_text.get_rect(right=content_left + 245, y=wind_y)
+        self.screen.blit(wind_text, wind_rect)
 
         # Wind gusts (right-aligned below wind)
         wind_gust = current.get('windGust', {}).get('value')
@@ -1578,11 +1627,11 @@ class WeatherStar4000Complete:
         # Center the 3-column block
         start_x = (total_width - total_cols_width) // 2
 
-        # Column positions
+        # Column positions - adjust first column right 10px, last column left 10px
         columns = [
-            start_x,
+            start_x + 10,  # Move TODAY box right 10px
             start_x + col_width + col_spacing,
-            start_x + (col_width + col_spacing) * 2
+            start_x + (col_width + col_spacing) * 2 - 10  # Move last column left 10px
         ]
 
         # Process first 3 periods (Today, Tomorrow, Day after)
@@ -1623,14 +1672,14 @@ class WeatherStar4000Complete:
             detailed = period.get('detailedForecast', '')
             words = detailed.split()
 
-            # Word wrap to fit column
+            # Word wrap to fit column - make text area 5px thinner on each side
             lines = []
             current_line = []
             for word in words:
                 test_line = ' '.join(current_line + [word])
-                test_surf = self.font_small.render(test_line, True, COLORS['white'])
+                test_surf = self.font_forecast.render(test_line, True, COLORS['white'])
 
-                if test_surf.get_width() > col_width - 10 and current_line:
+                if test_surf.get_width() > col_width - 20 and current_line:  # Changed from -10 to -20 (5px each side)
                     lines.append(' '.join(current_line))
                     current_line = [word]
                 else:
@@ -1639,14 +1688,14 @@ class WeatherStar4000Complete:
             if current_line:
                 lines.append(' '.join(current_line))
 
-            # Draw forecast text lines
+            # Draw forecast text lines with reduced spacing
             y_pos = 180
             for line in lines[:10]:  # Max 10 lines per column
-                text_surf = self.font_small.render(line, True, COLORS['white'])
+                text_surf = self.font_forecast.render(line, True, COLORS['white'])
                 # Center text in column
                 text_rect = text_surf.get_rect(center=(col_x + col_width // 2, y_pos))
                 self.screen.blit(text_surf, text_rect)
-                y_pos += 22
+                y_pos += 18  # Reduced from 22 to 18 for tighter spacing
 
         logger.main_logger.debug("Drew Local Forecast display")
 
@@ -1698,10 +1747,19 @@ class WeatherStar4000Complete:
             name_rect = name_text.get_rect(center=(col_center, 120))
             self.screen.blit(name_text, name_rect)
 
-            # Icon (maintain aspect ratio, max 75px height, wider for proper proportions)
+            # Icon (with animation support, maintain aspect ratio, max 75px height)
             icon_name = self._get_icon_name(day_period.get('icon', ''))
-            if icon_name and icon_name in self.icons:
+            original_icon = None
+
+            # Try animated icon first
+            if self.icon_manager:
+                original_icon = self.icon_manager.get_icon(icon_name)
+
+            # Fallback to static icon
+            if not original_icon and icon_name and icon_name in self.icons:
                 original_icon = self.icons[icon_name]
+
+            if original_icon:
                 orig_w, orig_h = original_icon.get_size()
 
                 # Scale to max height of 75px while maintaining aspect ratio
@@ -1955,24 +2013,39 @@ class WeatherStar4000Complete:
             radar_rect = self.radar_image.get_rect(center=(320, 260))
             self.screen.blit(self.radar_image, radar_rect)
         else:
-            # Fetch radar if not available
-            # Try to fetch radar
-            self.fetch_radar_image()
-
-            # Show placeholder
+            # Show placeholder (radar should already be preloaded)
             y_pos = 200
-            msg1 = self.font_normal.render("Loading radar...", True, COLORS['white'])
+            msg1 = self.font_normal.render("Radar data unavailable", True, COLORS['white'])
             msg1_rect = msg1.get_rect(center=(320, y_pos))
             self.screen.blit(msg1, msg1_rect)
 
         # Draw header AFTER radar so logo stays on top
         self.draw_header("Local", "Radar")
 
-        # Show location
+        # Show location and radar info
         location = f"{self.location.get('city', '')}, {self.location.get('state', '')}"
         loc_text = self.font_small.render(location, True, COLORS['yellow'])
         loc_rect = loc_text.get_rect(center=(320, 400))
         self.screen.blit(loc_text, loc_rect)
+
+        # Add radar legend (like original WeatherStar)
+        legend_y = 420
+        legend_items = [
+            ("Light", (0, 200, 0)),
+            ("Moderate", (255, 255, 0)),
+            ("Heavy", (255, 100, 0)),
+            ("Severe", (255, 0, 0))
+        ]
+
+        start_x = 160  # Center the legend
+        for i, (label, color) in enumerate(legend_items):
+            x_pos = start_x + (i * 80)
+            # Draw color box
+            pygame.draw.rect(self.screen, color, (x_pos, legend_y, 12, 8))
+            # Draw label
+            if hasattr(self, 'font_tiny'):
+                label_surf = self.font_tiny.render(label, True, COLORS['white'])
+                self.screen.blit(label_surf, (x_pos + 15, legend_y - 1))
 
     def draw_almanac(self):
         """Draw Almanac screen with weather statistics and records"""
@@ -2064,7 +2137,7 @@ class WeatherStar4000Complete:
         # Check for any alerts in the forecast data
         forecast = self.weather_data.get('forecast', {})
 
-        y_pos = 120
+        y_pos = 140  # Moved down 20px from 120
 
         # For now, show general hazard information
         # In a full implementation, this would fetch actual alerts from NOAA
@@ -2230,7 +2303,8 @@ class WeatherStar4000Complete:
         ]
 
         for pollen_type, level in pollen_data:
-            label = self.font_small.render(f"{pollen_type}:", True, COLORS['white'])
+            # Use smaller font for better fit
+            label = self.font_tiny.render(f"{pollen_type}:", True, COLORS['white'])
             self.screen.blit(label, (right_x, pollen_y))
 
             # Color code the level
@@ -2241,30 +2315,85 @@ class WeatherStar4000Complete:
             else:
                 color = (100, 255, 100)  # Green
 
-            # Draw level bar
+            # Align bars properly - fixed position for all bars
+            bar_x = right_x + 70  # Fixed starting position
             bar_width = 80 if level == "HIGH" else 60 if level == "MODERATE" else 40
-            pygame.draw.rect(self.screen, color, (right_x + 60, pollen_y + 2, bar_width, 12))
-            level_text = self.font_small.render(level, True, COLORS['white'])
-            self.screen.blit(level_text, (right_x + 150, pollen_y))
+            pygame.draw.rect(self.screen, color, (bar_x, pollen_y + 2, bar_width, 12))
+
+            # Position level text after the bar
+            level_text = self.font_tiny.render(level, True, color)
+            text_x = bar_x + bar_width + 10  # 10px after the bar
+            self.screen.blit(level_text, (text_x, pollen_y))
             pollen_y += 25
 
-        # Bottom section - Health recommendations
-        y_pos = max(y_pos, pollen_y) + 30
+        # Bottom section - Health recommendations with scrolling if needed
+        y_pos = max(y_pos, pollen_y) + 20
         tips_title = self.font_normal.render("HEALTH RECOMMENDATIONS", True, COLORS['yellow'])
         tips_rect = tips_title.get_rect(center=(320, y_pos))
         self.screen.blit(tips_title, tips_rect)
-        y_pos += 30
+        y_pos += 25
 
         tips = [
-            "• Air quality is good for outdoor activities",
-            "• High mold count - allergy sufferers take precaution",
-            "• UV index moderate - use sunscreen if outside"
+            "Air quality is good for outdoor activities",
+            "High mold count - allergy sufferers take precaution",
+            "UV index moderate - use sunscreen if outside"
         ]
 
+        # Create clipping area for recommendations
+        clip_rect = pygame.Rect(60, y_pos, 520, 440 - y_pos)  # Leave some margin at bottom
+        self.screen.set_clip(clip_rect)
+
+        # Initialize scroll position if not exists
+        if not hasattr(self, 'health_scroll_pos'):
+            self.health_scroll_pos = 0
+            self.health_scroll_dir = 1
+
+        # Auto-scroll if text is too long
+        total_height = len(tips) * 22
+        if total_height > (440 - y_pos):
+            # Update scroll position
+            self.health_scroll_pos += self.health_scroll_dir * 0.5
+            if self.health_scroll_pos > 0:
+                self.health_scroll_pos = 0
+                self.health_scroll_dir = -1
+            elif self.health_scroll_pos < -(total_height - (440 - y_pos)):
+                self.health_scroll_pos = -(total_height - (440 - y_pos))
+                self.health_scroll_dir = 1
+
+        # Draw tips with scroll offset
+        tip_y = y_pos + self.health_scroll_pos if hasattr(self, 'health_scroll_pos') else y_pos
         for tip in tips:
-            tip_text = self.font_small.render(tip, True, COLORS['white'])
-            self.screen.blit(tip_text, (80, y_pos))
-            y_pos += 22
+            # Use smaller font and proper wrapping
+            if self.font_tiny.size(tip)[0] > 500:
+                # Word wrap long tips
+                words = tip.split()
+                lines = []
+                current_line = ""
+                for word in words:
+                    test_line = f"{current_line} {word}".strip()
+                    if self.font_tiny.size(test_line)[0] <= 500:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+                if current_line:
+                    lines.append(current_line)
+
+                # Draw wrapped lines
+                for line in lines:
+                    if 0 < tip_y < 440:  # Only draw visible lines
+                        tip_text = self.font_tiny.render(f"• {line}", True, COLORS['white'])
+                        self.screen.blit(tip_text, (70, tip_y))
+                    tip_y += 20
+            else:
+                if 0 < tip_y < 440:  # Only draw visible lines
+                    tip_text = self.font_tiny.render(f"• {tip}", True, COLORS['white'])
+                    self.screen.blit(tip_text, (70, tip_y))
+                tip_y += 22
+
+        # Reset clipping
+        self.screen.set_clip(None)
 
         logger.main_logger.debug("Drew Air Quality display")
 
@@ -2277,9 +2406,9 @@ class WeatherStar4000Complete:
         forecast = self.weather_data.get('forecast', {})
         periods = forecast.get('periods', [])
 
-        # Graph area - moved up 10 pixels
+        # Graph area - raised by 5 pixels more
         graph_left = 80
-        graph_top = 110  # Was 120, now 110
+        graph_top = 105  # Was 110, now 105 (raised 5px more)
         graph_width = 480
         graph_height = 250
 
@@ -2323,10 +2452,40 @@ class WeatherStar4000Complete:
                 high_y = graph_top + graph_height - ((high - min_temp) / temp_range * graph_height)
                 low_y = graph_top + graph_height - ((low - min_temp) / temp_range * graph_height)
 
-                # Draw temperature bar
+                # Draw temperature bar with color gradient
                 bar_x = x - 20
                 bar_height = abs(low_y - high_y)
-                pygame.draw.rect(self.screen, COLORS['blue'], (bar_x, high_y, 40, bar_height))
+
+                # Calculate color based on average temperature
+                avg_temp = (high + low) / 2
+                # Color gradient from blue (cold) to red (hot)
+                if avg_temp < 32:  # Freezing
+                    bar_color = (100, 150, 255)  # Light blue
+                elif avg_temp < 50:  # Cold
+                    bar_color = (150, 200, 255)  # Lighter blue
+                elif avg_temp < 65:  # Cool
+                    bar_color = (150, 255, 150)  # Light green
+                elif avg_temp < 75:  # Mild
+                    bar_color = (255, 255, 100)  # Yellow
+                elif avg_temp < 85:  # Warm
+                    bar_color = (255, 200, 100)  # Orange
+                else:  # Hot
+                    bar_color = (255, 100, 100)  # Red
+
+                # Draw gradient bar
+                # Draw multiple rectangles with slightly different colors for gradient effect
+                gradient_steps = 5
+                step_height = bar_height / gradient_steps
+                for j in range(gradient_steps):
+                    # Interpolate color
+                    factor = j / gradient_steps
+                    r = int(bar_color[0] * (1 - factor * 0.3))  # Darken towards bottom
+                    g = int(bar_color[1] * (1 - factor * 0.3))
+                    b = int(bar_color[2] * (1 - factor * 0.3))
+                    step_color = (min(255, r), min(255, g), min(255, b))
+
+                    pygame.draw.rect(self.screen, step_color,
+                                   (bar_x, high_y + j * step_height, 40, step_height + 1))
 
                 # Draw temperatures
                 high_text = self.font_small.render(str(high), True, COLORS['yellow'])
@@ -2337,9 +2496,9 @@ class WeatherStar4000Complete:
                 low_rect = low_text.get_rect(center=(x, low_y + 20))
                 self.screen.blit(low_text, low_rect)
 
-                # Draw day label
+                # Draw day label - raised by 10px as requested
                 label_text = self.font_small.render(label, True, COLORS['white'])
-                label_rect = label_text.get_rect(center=(x, graph_top + graph_height + 20))
+                label_rect = label_text.get_rect(center=(x, graph_top + graph_height + 10))  # Was +20, now +10
                 self.screen.blit(label_text, label_rect)
 
         logger.main_logger.debug("Drew Temperature Graph display")
@@ -2396,15 +2555,15 @@ class WeatherStar4000Complete:
         self.draw_background('1')  # Use background 1 (standard 2-column)
         self.draw_header("Sun & Moon", "Data")
 
-        # Two column layout
+        # Two column layout - moved closer together
         left_col_x = 60
-        right_col_x = 350
+        right_col_x = 335  # Moved 15px to the left to close gap
         y_pos = 120
 
         # LEFT COLUMN - Sun data
-        sun_title = self.font_extended.render("SUN", True, COLORS['yellow'])
+        sun_title = self.font_normal.render("SUN", True, COLORS['yellow'])
         self.screen.blit(sun_title, (left_col_x, y_pos))
-        sun_y = y_pos + 35
+        sun_y = y_pos + 30
 
         # Calculate approximate sunrise/sunset (simplified)
         now = datetime.now()
@@ -2425,18 +2584,22 @@ class WeatherStar4000Complete:
         ]
 
         for label, value in sun_data:
-            label_text = self.font_small.render(f"{label}:", True, COLORS['white'])
+            # Use tiny font for better fit
+            label_text = self.font_tiny.render(f"{label}:", True, COLORS['white'])
             self.screen.blit(label_text, (left_col_x + 10, sun_y))
 
-            value_text = self.font_small.render(value, True, COLORS['yellow'])
-            self.screen.blit(value_text, (left_col_x + 140, sun_y))
+            # Calculate proper position for value to avoid overlap - 5px thinner
+            label_width = self.font_tiny.size(f"{label}:")[0]
+            value_x = left_col_x + 15 + max(110, label_width + 10)  # Reduced from 120 to 110
+            value_text = self.font_tiny.render(value, True, COLORS['yellow'])
+            self.screen.blit(value_text, (value_x, sun_y))
 
-            sun_y += 28
+            sun_y += 24  # Reduced spacing
 
         # RIGHT COLUMN - Moon data
-        moon_title = self.font_extended.render("MOON", True, COLORS['yellow'])
+        moon_title = self.font_normal.render("MOON", True, COLORS['yellow'])
         self.screen.blit(moon_title, (right_col_x, y_pos))
-        moon_y = y_pos + 35
+        moon_y = y_pos + 30
 
         # Calculate moon phase (simplified)
         moon_age = (now.day % 30)  # Very simplified
@@ -2467,13 +2630,17 @@ class WeatherStar4000Complete:
         ]
 
         for label, value in moon_data:
-            label_text = self.font_small.render(f"{label}:", True, COLORS['white'])
+            # Use tiny font for better fit
+            label_text = self.font_tiny.render(f"{label}:", True, COLORS['white'])
             self.screen.blit(label_text, (right_col_x + 10, moon_y))
 
-            value_text = self.font_small.render(value, True, COLORS['yellow'])
-            self.screen.blit(value_text, (right_col_x + 110, moon_y))
+            # Calculate proper position for value to avoid overlap - 5px thinner
+            label_width = self.font_tiny.size(f"{label}:")[0]
+            value_x = right_col_x + 15 + max(100, label_width + 10)  # Reduced from 110 to 100
+            value_text = self.font_tiny.render(value, True, COLORS['yellow'])
+            self.screen.blit(value_text, (value_x, moon_y))
 
-            moon_y += 28
+            moon_y += 24  # Reduced spacing
 
         logger.main_logger.debug("Drew Sun & Moon display")
 
@@ -2549,45 +2716,148 @@ class WeatherStar4000Complete:
         logger.main_logger.debug("Drew Wind & Pressure display")
 
     def draw_weekend_forecast(self):
-        """Draw Weekend Forecast"""
-        self.draw_background('2')
+        """Draw Weekend Forecast in 2 columns"""
+        self.draw_background('4')  # Use hourly forecast background
         self.draw_header("Weekend", "Forecast")
 
         forecast = self.weather_data.get('forecast', {})
         periods = forecast.get('periods', [])
 
-        y_pos = 120
+        # Two column layout
+        left_col_x = 60
+        right_col_x = 340
+        col_width = 260
 
         # Find weekend periods
-        weekend_periods = []
+        saturday_periods = []
+        sunday_periods = []
+
         for period in periods:
             name = period.get('name', '')
-            if any(day in name for day in ['Saturday', 'Sunday']):
-                weekend_periods.append(period)
-                if len(weekend_periods) >= 4:  # Sat day/night, Sun day/night
-                    break
+            if 'Saturday' in name:
+                saturday_periods.append(period)
+            elif 'Sunday' in name:
+                sunday_periods.append(period)
 
-        if weekend_periods:
-            for period in weekend_periods[:4]:
-                # Day name
+            # Stop when we have both day and night for each
+            if len(saturday_periods) >= 2 and len(sunday_periods) >= 2:
+                break
+
+        # Draw Saturday column
+        if saturday_periods:
+            y_pos = 135  # Moved down 15px from 120
+            # Saturday header
+            sat_title = self.font_extended.render("SATURDAY", True, COLORS['yellow'])
+            sat_rect = sat_title.get_rect(center=(left_col_x + col_width // 2, y_pos))
+            self.screen.blit(sat_title, sat_rect)
+            y_pos += 35
+
+            for period in saturday_periods[:2]:  # Day and Night
+                # Period name (DAY/NIGHT)
                 name = period.get('name', '')
-                name_text = self.font_extended.render(name.upper(), True, COLORS['yellow'])
-                self.screen.blit(name_text, (60, y_pos))
-                y_pos += 30
+                time_of_day = "DAY" if "Day" in name or not "Night" in name else "NIGHT"
+                tod_text = self.font_normal.render(time_of_day, True, COLORS['cyan'])
+                self.screen.blit(tod_text, (left_col_x + 10, y_pos))
+                y_pos += 25
 
                 # Temperature
                 temp = period.get('temperature')
                 if temp:
-                    temp_text = self.font_normal.render(f"Temperature: {temp}°", True, COLORS['white'])
-                    self.screen.blit(temp_text, (80, y_pos))
+                    temp_text = self.font_normal.render(f"{temp}°", True, COLORS['white'])
+                    self.screen.blit(temp_text, (left_col_x + 10, y_pos))
                     y_pos += 25
 
-                # Conditions
+                # Weather icon (if available) - 1x1 animated
+                icon_name = self._get_icon_name(period.get('icon', ''))
+                if self.icon_manager:
+                    icon = self.icon_manager.get_icon(icon_name, 40, 40)  # 1x1 square
+                    if icon:
+                        self.screen.blit(icon, (left_col_x + 70, y_pos - 50))
+
+                # Short forecast with word wrap
                 short = period.get('shortForecast', '')
-                cond_text = self.font_normal.render(f"Conditions: {short}", True, COLORS['white'])
-                self.screen.blit(cond_text, (80, y_pos))
-                y_pos += 35
-        else:
+                words = short.split()
+                lines = []
+                current_line = ""
+
+                for word in words:
+                    test_line = f"{current_line} {word}".strip()
+                    if self.font_tiny.size(test_line)[0] <= col_width - 20:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+
+                if current_line:
+                    lines.append(current_line)
+
+                # Draw forecast text
+                for line in lines[:3]:  # Max 3 lines
+                    text = self.font_tiny.render(line, True, COLORS['white'])
+                    self.screen.blit(text, (left_col_x + 10, y_pos))
+                    y_pos += 18
+
+                y_pos += 15  # Space between day/night
+
+        # Draw Sunday column
+        if sunday_periods:
+            y_pos = 135  # Moved down 15px from 120
+            # Sunday header
+            sun_title = self.font_extended.render("SUNDAY", True, COLORS['yellow'])
+            sun_rect = sun_title.get_rect(center=(right_col_x + col_width // 2, y_pos))
+            self.screen.blit(sun_title, sun_rect)
+            y_pos += 35
+
+            for period in sunday_periods[:2]:  # Day and Night
+                # Period name (DAY/NIGHT)
+                name = period.get('name', '')
+                time_of_day = "DAY" if "Day" in name or not "Night" in name else "NIGHT"
+                tod_text = self.font_normal.render(time_of_day, True, COLORS['cyan'])
+                self.screen.blit(tod_text, (right_col_x + 10, y_pos))
+                y_pos += 25
+
+                # Temperature
+                temp = period.get('temperature')
+                if temp:
+                    temp_text = self.font_normal.render(f"{temp}°", True, COLORS['white'])
+                    self.screen.blit(temp_text, (right_col_x + 10, y_pos))
+                    y_pos += 25
+
+                # Weather icon (if available) - 1x1 animated
+                icon_name = self._get_icon_name(period.get('icon', ''))
+                if self.icon_manager:
+                    icon = self.icon_manager.get_icon(icon_name, 40, 40)  # 1x1 square
+                    if icon:
+                        self.screen.blit(icon, (right_col_x + 70, y_pos - 50))
+
+                # Short forecast with word wrap
+                short = period.get('shortForecast', '')
+                words = short.split()
+                lines = []
+                current_line = ""
+
+                for word in words:
+                    test_line = f"{current_line} {word}".strip()
+                    if self.font_tiny.size(test_line)[0] <= col_width - 20:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+
+                if current_line:
+                    lines.append(current_line)
+
+                # Draw forecast text
+                for line in lines[:3]:  # Max 3 lines
+                    text = self.font_tiny.render(line, True, COLORS['white'])
+                    self.screen.blit(text, (right_col_x + 10, y_pos))
+                    y_pos += 18
+
+                y_pos += 15  # Space between day/night
+
+        if not saturday_periods and not sunday_periods:
             # No weekend data
             msg = self.font_normal.render("Weekend forecast not available", True, COLORS['white'])
             msg_rect = msg.get_rect(center=(320, 240))
@@ -2705,6 +2975,9 @@ class WeatherStar4000Complete:
             minutes = (now.minute // 5) * 5
             radar_time = now.replace(minute=minutes, second=0, microsecond=0)
 
+            # Store radar time for display
+            self.radar_time = radar_time
+
             # Try current and previous few radar times (in case latest isn't available yet)
             radar_times = []
             for i in range(6):  # Try up to 30 minutes back
@@ -2744,16 +3017,59 @@ class WeatherStar4000Complete:
                         # Scale the radar
                         scaled_radar = pygame.transform.scale(radar_raw, (new_w, new_h))
 
-                        # Apply vintage color reduction for 1990s look
-                        # Create a surface with reduced color depth
+                        # Apply 1990s WeatherStar 4000 radar styling
                         vintage_radar = pygame.Surface((new_w, new_h))
-                        vintage_radar.blit(scaled_radar, (0, 0))
 
-                        # Apply slight darkening for vintage CRT look
-                        dark_overlay = pygame.Surface((new_w, new_h))
-                        dark_overlay.set_alpha(30)  # Slight darkening
-                        dark_overlay.fill((0, 0, 0))
-                        vintage_radar.blit(dark_overlay, (0, 0))
+                        # Create classic WeatherStar color mapping
+                        # Original 1990s radar used specific colors for precipitation intensity
+                        # Light precipitation: Green
+                        # Moderate precipitation: Yellow
+                        # Heavy precipitation: Red
+                        # Severe: Magenta/Purple
+
+                        # Process each pixel to remap colors to classic palette
+                        pygame.surfarray.use_arraytype('numpy')
+                        try:
+                            import numpy as np
+                            pixel_array = pygame.surfarray.array3d(scaled_radar)
+
+                            # Create output array
+                            output_array = pixel_array.copy()
+
+                            # Map colors to 1990s WeatherStar palette
+                            for x in range(new_w):
+                                for y in range(new_h):
+                                    r, g, b = pixel_array[x, y]
+                                    # Convert to grayscale intensity
+                                    intensity = int(0.299 * r + 0.587 * g + 0.114 * b)
+
+                                    # Map to classic radar colors based on intensity
+                                    if intensity < 50:  # Background/no precipitation
+                                        output_array[x, y] = [20, 20, 50]  # Dark blue background
+                                    elif intensity < 100:  # Light precipitation
+                                        output_array[x, y] = [0, 200, 0]  # Green
+                                    elif intensity < 150:  # Moderate precipitation
+                                        output_array[x, y] = [255, 255, 0]  # Yellow
+                                    elif intensity < 200:  # Heavy precipitation
+                                        output_array[x, y] = [255, 100, 0]  # Orange
+                                    else:  # Very heavy/severe
+                                        output_array[x, y] = [255, 0, 0]  # Red
+
+                            # Convert back to surface
+                            vintage_radar = pygame.surfarray.make_surface(output_array)
+                        except ImportError:
+                            # Fallback if numpy not available
+                            vintage_radar.blit(scaled_radar, (0, 0))
+
+                        # Add subtle scan lines for CRT effect
+                        for y in range(0, new_h, 2):
+                            pygame.draw.line(vintage_radar, (0, 0, 0, 20), (0, y), (new_w, y))
+
+                        # Add timestamp overlay (like original WeatherStar)
+                        timestamp_text = f"RADAR - {radar_time.strftime('%I:%M %p')}"
+                        if hasattr(self, 'font_tiny'):
+                            ts_surface = self.font_tiny.render(timestamp_text, True, (255, 255, 255))
+                            vintage_radar.blit(ts_surface, (5, 5))
 
                         self.radar_image = vintage_radar
                         self.radar_last_fetch = time.time()  # Update fetch timestamp

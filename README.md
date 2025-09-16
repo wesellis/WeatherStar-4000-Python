@@ -1,10 +1,37 @@
-# 🌤️ WeatherStar 4000+ Python Edition
+# 📺 WeatherStar 4000 Python Recreation
 
-A faithful Python recreation of the iconic Weather Channel WeatherStar 4000 system from the late 1990s, bringing nostalgic weather displays to modern hardware.
+<div align="center">
 
-## 📺 What is WeatherStar 4000?
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Pygame](https://img.shields.io/badge/Pygame-00AA00?style=for-the-badge&logo=python&logoColor=white)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-A22846?style=for-the-badge&logo=Raspberry%20Pi&logoColor=white)
+![NOAA](https://img.shields.io/badge/NOAA%20API-003087?style=for-the-badge&logo=gov&logoColor=white)
+![CRT](https://img.shields.io/badge/CRT%20TV-Ready-orange?style=for-the-badge)
 
-The WeatherStar 4000 was the computer system used by The Weather Channel from 1990-1998 to generate local weather information for cable TV viewers. This project recreates that classic experience with authentic graphics, fonts, music, and display modes.
+### **Authentic 1990s Weather Channel Experience**
+*A pixel-perfect recreation of the iconic WeatherStar 4000 for Raspberry Pi and CRT TVs*
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![CRT Compatible](https://img.shields.io/badge/4:3%20CRT-Compatible-green.svg)](https://en.wikipedia.org/wiki/Cathode-ray_tube)
+
+[Features](#-features) • [Quick Start](#-quick-start) • [Raspberry Pi](#-raspberry-pi--crt-tv-setup) • [Screenshots](#-screenshots) • [Documentation](#-documentation)
+
+</div>
+
+---
+
+## 🎯 **Project Overview**
+
+The WeatherStar 4000 was the iconic weather information system used by The Weather Channel throughout the 1990s. This Python recreation brings that nostalgic experience to modern hardware, **optimized for Raspberry Pi and authentic display on 4:3 CRT televisions**.
+
+### **Perfect for:**
+- 📺 **CRT TV collectors** - Native 640x480 resolution perfect for 4:3 displays
+- 🖥️ **Retro computing enthusiasts** - Authentic 90s experience
+- 🌡️ **Weather monitoring stations** - Professional weather display
+- 🏫 **Educational displays** - Museums, schools, maker spaces
+- 🎮 **Nostalgia projects** - Relive the 90s Weather Channel
 
 ## ✨ Features
 
@@ -19,22 +46,23 @@ The WeatherStar 4000 was the computer system used by The Weather Channel from 19
 - **Local Radar** - Animated radar imagery
 - **Hazards & Warnings** - Active weather alerts
 
-### 🆕 Enhanced Features (New!)
-- **Marine/Beach Forecast** - Coastal conditions, tides, wave heights
-- **Air Quality & Health** - AQI, pollen counts, health recommendations
-- **7-Day Temperature Graph** - Visual temperature trends
+### 🆕 Enhanced Features (New in v1.0!)
+- **Air Quality & Health** - Real-time AQI, pollen counts, health recommendations
+- **7-Day Temperature Graph** - Color-coded temperature trends (blue=cold to red=hot)
 - **Weather Records** - Historical comparisons
 - **Sun & Moon Data** - Detailed astronomy information
-- **Wind & Pressure Analysis** - Detailed atmospheric conditions
-- **Weekend Forecast** - Focused weekend weather
-- **Monthly Outlook** - Extended 30-day trends
+- **Wind & Pressure Analysis** - Barometric trends
+- **Weekend Forecast** - 2-column Saturday/Sunday display
+- **Animated Weather Icons** - GIF animations for rain, snow, storms
+- **News Integration** - MSN, Reddit, and REAL local news headlines
+- **Clickable Headlines** - Open news articles in browser
 
-### 🎵 Nostalgic Experience
-- Authentic smooth jazz background music from the 90s
-- Original Star4000 fonts
-- Classic blue gradient backgrounds
-- Smooth transitions between displays
-- Bottom scroll with current conditions
+### 🎵 Authentic Experience
+- **75+ Smooth Jazz Tracks** - Hours of period-correct background music
+- **Original Star4000 Fonts** - Pixel-perfect bitmap fonts
+- **Classic Backgrounds** - Blue gradients and authentic layouts
+- **Smooth Transitions** - Auto-cycling through all displays
+- **Scrolling Ticker** - Classic bottom banner with conditions
 
 ### 📊 Smart Features
 - **Weather Trend Arrows** - Rising/falling indicators for temperature and pressure
@@ -45,9 +73,11 @@ The WeatherStar 4000 was the computer system used by The Weather Channel from 19
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.7+
-- Windows, Mac, or Linux (Raspberry Pi supported!)
+### System Requirements
+- Python 3.7 or higher
+- 1GB RAM minimum (2GB recommended)
+- Internet connection for weather data
+- **Perfect for Raspberry Pi 3B+, 4, or Zero 2W**
 
 ### Installation
 

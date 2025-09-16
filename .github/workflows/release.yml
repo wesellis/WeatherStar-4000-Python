@@ -1,0 +1,172 @@
+name: Create Full Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: WeatherStar 4000 v${{ github.event.inputs.version || '1.0.0' }}
+        draft: false
+        prerelease: false
+        body: |
+          # 📺 WeatherStar 4000 v1.0 - Complete Release
+
+          **The authentic 1990s Weather Channel experience for modern devices!**
+
+          ## 🎉 What's New in v1.0
+          - ✅ Full Windows executable (no Python needed)
+          - ✅ Raspberry Pi image (ready to flash)
+          - ✅ 75+ smooth jazz tracks
+          - ✅ Animated weather icons
+          - ✅ Emergency weather alerts
+          - ✅ Real-time NOAA weather data
+          - ✅ CRT TV support (640x480)
+          - ✅ News integration (MSN, Reddit)
+
+          ## 📦 Download Options
+
+          ### For Windows Users
+          - Download: `WeatherStar4000-Windows-v1.0.zip`
+          - Extract and run `WeatherStar4000.exe`
+          - No installation required!
+
+          ### For Raspberry Pi Users
+          - Download: `weatherstar4000-pi-v1.0.img.gz`
+          - Flash to SD card with Balena Etcher
+          - Perfect for CRT TVs!
+
+          ### For Developers
+          - Download: `Source code (zip)`
+          - Requires Python 3.7+ and dependencies
+
+          ## 🎮 Controls
+          - **SPACE** - Pause/Resume rotation
+          - **F** - Fullscreen mode
+          - **S** - Settings menu
+          - **M** - Mute/Unmute music
+          - **ESC** - Exit
+
+          ## 💻 System Requirements
+
+          ### Windows
+          - Windows 10/11 (64-bit)
+          - 500MB disk space
+          - Internet connection
+
+          ### Raspberry Pi
+          - Pi 3B+, 4, or Zero 2W
+          - 8GB SD card
+          - Composite or HDMI output
+
+          ## 🔧 Configuration
+          Settings saved in:
+          - Windows: `%APPDATA%\.weatherstar4000_settings.json`
+          - Linux/Pi: `~/.weatherstar4000_settings.json`
+
+          ## 📺 CRT TV Setup (Raspberry Pi)
+          1. Connect composite video cable
+          2. Yellow = Video, Red/White = Audio
+          3. System auto-configures for 640x480
+
+          ## 🐛 Known Issues
+          - Local news disabled by default (requires API key)
+          - Some international locations may have limited data
+
+          ## 🙏 Credits
+          - Original WeatherStar 4000 by The Weather Channel
+          - Weather data from NOAA/NWS
+          - Inspired by ws4kp project
+
+          ## 📝 License
+          MIT License - See LICENSE file
+
+          ---
+
+          **Enjoy the nostalgia! Bringing the 90s back, one pixel at a time.**
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Build Windows Executable
+      run: |
+        pip install pyinstaller pygame pillow requests
+        pyinstaller --onefile --windowed --name WeatherStar4000 weatherstar4000.py
+
+    - name: Package Windows Release
+      run: |
+        New-Item -ItemType Directory -Force -Path "release"
+        Copy-Item "dist/WeatherStar4000.exe" -Destination "release/"
+        Compress-Archive -Path "release/*" -DestinationPath "WeatherStar4000-Windows-v1.0.zip"
+
+    - name: Upload Windows Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./WeatherStar4000-Windows-v1.0.zip
+        asset_name: WeatherStar4000-Windows-v1.0.zip
+        asset_content_type: application/zip
+
+  build-pi-image:
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build Raspberry Pi Image
+      uses: dtcooper/rpi-image-modifier@v1
+      id: build_image
+      with:
+        base-image-url: https://downloads.raspberrypi.com/raspios_lite_armhf/images/raspios_lite_armhf-2024-03-15/2024-03-15-raspios-bookworm-armhf-lite.img.xz
+        mount-repository: true
+        script: |
+          apt-get update && apt-get install -y python3-pygame python3-pil python3-requests
+          cp -r /github/workspace /opt/weatherstar4000
+          echo "WeatherStar 4000 installed!"
+
+    - name: Compress Image
+      run: |
+        gzip -9 *.img
+        mv *.img.gz weatherstar4000-pi-v1.0.img.gz
+
+    - name: Upload Pi Image
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./weatherstar4000-pi-v1.0.img.gz
+        asset_name: weatherstar4000-pi-v1.0.img.gz
+        asset_content_type: application/gzip

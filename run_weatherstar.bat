@@ -11,5 +11,5 @@ if errorlevel 1 (
 )
 
 echo Starting WeatherStar 4000...
-python run_weatherstar.py
+python weatherstar4000.py
 pause
