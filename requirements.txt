@@ -2,9 +2,9 @@
 # Works on Raspberry Pi 3B+, 4, and Zero 2 W
 
 # Core Requirements
-pygame==2.6.0       # Display rendering, audio playback (latest stable)
+pygame==2.6.1       # Display rendering, audio playback (latest stable - Sep 2024)
 requests==2.32.3    # API calls to weather services (security update)
-Pillow==10.4.0      # Image processing for radar (security update)
+Pillow==11.0.0      # Image processing for radar (latest security update)
 
 # Optional but recommended
 ephem>=4.1.0        # Accurate astronomy calculations (sun/moon data)

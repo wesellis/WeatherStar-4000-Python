@@ -120,7 +120,7 @@ class WeatherStarNewsDisplays:
         self.logger.main_logger.debug("Drew Reddit news display")
 
     def _display_categorized_headlines(self, headlines, source):
-        """Display scrolling headlines with colored categories"""
+        """Display scrolling headlines with colored categories - single line"""
         # Initialize scroll position if needed
         if not hasattr(self.ws, 'news_vertical_scroll'):
             self.ws.news_vertical_scroll = {}
@@ -158,15 +158,21 @@ class WeatherStarNewsDisplays:
             'r/DIY': (200, 150, 100),  # Brown
         }
 
-        # Margins - 20px thinner (65px from edges), 40px less height
-        left_margin = 65
-        right_margin = 65
-        top_margin = 100
-        display_width = 640 - left_margin - right_margin  # 510px width
+        # Adjusted margins: 15px earlier at top, 20px up at bottom, 10px on right
+        left_margin = 20
+        right_margin = 30  # 10px more on right
+        top_margin = 85    # 15px earlier (was 100)
+        display_width = 640 - left_margin - right_margin  # 590px width
+
+        # Clear clickable headlines list
+        if not hasattr(self.ws, 'clickable_headlines'):
+            self.ws.clickable_headlines = []
+        else:
+            self.ws.clickable_headlines.clear()
 
         # Scrolling setup
         line_height = 26
-        max_visible_height = 300  # Reduced by 40px (was 340)
+        max_visible_height = 335  # 20px less at bottom (was 355, then 300, now 335)
         total_height = len(headlines) * line_height
         max_scroll = max(0, total_height - max_visible_height)
 
@@ -179,17 +185,54 @@ class WeatherStarNewsDisplays:
             url = item[2] if len(item) > 2 else ""
 
             # Only render if within visible area
-            if current_y > top_margin - line_height and current_y < 440:
+            if current_y > top_margin - line_height and current_y < (top_margin + max_visible_height):
+                # Calculate space for category
+                cat_width = 95  # Fixed width for category column
+
                 # Draw category with color
                 cat_color = category_colors.get(category, COLORS['cyan'])
                 cat_text = self.ws.font_tiny.render(category, True, cat_color)
                 self.ws.screen.blit(cat_text, (left_margin, current_y))
 
-                # Draw headline in white (truncate to fit display width)
-                max_headline_chars = 60  # Adjusted for narrower width
-                display_headline = headline[:max_headline_chars] if len(headline) > max_headline_chars else headline
-                headline_text = self.ws.font_tiny.render(display_headline, True, COLORS['white'])
-                self.ws.screen.blit(headline_text, (left_margin + 110, current_y))
+                # Calculate remaining space for headline (allow word wrap)
+                headline_x = left_margin + cat_width
+                headline_width = display_width - cat_width
+
+                # Word wrap the headline if needed
+                words = headline.split()
+                lines = []
+                current_line = []
+                current_length = 0
+                max_chars_per_line = int(headline_width / 7)  # Approximate char width
+
+                for word in words:
+                    word_length = len(word) + 1  # +1 for space
+                    if current_length + word_length <= max_chars_per_line:
+                        current_line.append(word)
+                        current_length += word_length
+                    else:
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        current_line = [word]
+                        current_length = word_length
+
+                if current_line:
+                    lines.append(' '.join(current_line))
+
+                # Display wrapped text
+                for i, line in enumerate(lines[:2]):  # Max 2 lines
+                    line_y = current_y + (i * 13)  # Half line height for wrapped text
+                    if line_y < (top_margin + max_visible_height):
+                        headline_text = self.ws.font_tiny.render(line, True, COLORS['white'])
+                        self.ws.screen.blit(headline_text, (headline_x, line_y))
+
+                # Store clickable area with URL
+                if url:
+                    self.ws.clickable_headlines.append({
+                        'rect': pygame.Rect(left_margin, current_y, display_width, line_height),
+                        'url': url,
+                        'text': headline
+                    })
 
             current_y += line_height
 

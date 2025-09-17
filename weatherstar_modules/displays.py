@@ -839,8 +839,8 @@ class WeatherStarDisplays:
         # Continuous scroll position (loops seamlessly)
         scroll_offset = scroll_time % (total_content_height + content_height)
 
-        # Draw header with proper spacing for alignment
-        header_text = self.ws.font_small.render("TIME      TEMP  CONDITIONS", True, COLORS['yellow'])
+        # Draw header with reduced spacing for alignment (10px less between TIME and TEMP)
+        header_text = self.ws.font_small.render("TIME    TEMP  CONDITIONS", True, COLORS['yellow'])
         self.ws.screen.blit(header_text, (60, content_top))
 
         # Create clipping region to hide scrolling text outside content area
@@ -879,8 +879,8 @@ class WeatherStarDisplays:
                     # Short forecast
                     short = period.get('shortForecast', '')[:35]
 
-                    # Format the line with proper spacing to align with headers
-                    text = f"{time_display:8}  {temp_display:5}{short}"
+                    # Format the line with reduced spacing between time and temp (10px less)
+                    text = f"{time_display:7} {temp_display:5}{short}"
 
                     # Use appropriate font
                     period_text = self.ws.font_normal.render(text, True, COLORS['white'])
