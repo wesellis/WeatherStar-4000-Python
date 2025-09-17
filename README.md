@@ -26,6 +26,11 @@
 
 The WeatherStar 4000 was the iconic weather information system used by The Weather Channel throughout the 1990s. This Python recreation brings that nostalgic experience to modern hardware, **optimized for Raspberry Pi and authentic display on 4:3 CRT televisions**.
 
+<div align="center">
+  <img src="docs/images/current_conditions.png" width="45%" alt="Current Conditions">
+  <img src="docs/images/weather_forecast.png" width="45%" alt="Weather Forecast">
+</div>
+
 ### **Perfect for:**
 - 📺 **CRT TV collectors** - Native 640x480 resolution perfect for 4:3 displays
 - 🖥️ **Retro computing enthusiasts** - Authentic 90s experience
@@ -240,14 +245,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📺 Screenshots
 
-### Current Conditions
-![Current Conditions](weatherstar_assets/screenshots/current.png)
+### Terminal View - Running WeatherStar 4000+
+![Terminal View](docs/images/terminal_view.png)
 
-### Local Forecast
-![Local Forecast](weatherstar_assets/screenshots/forecast.png)
+### Current Conditions Display
+![Current Conditions](docs/images/current_conditions.png)
 
-### Local Radar
-![Radar](weatherstar_assets/screenshots/radar.png)
+### Weather Forecast Display
+![Weather Forecast](docs/images/weather_forecast.png)
 
 ---
 
