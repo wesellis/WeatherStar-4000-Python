@@ -182,12 +182,12 @@ class WeatherStarNewsDisplays:
             'r/DIY': (200, 150, 100),  # Brown
         }
 
-        # Center content in 4:3 display box (640x480) - pulled inward more
+        # Center content in 4:3 display box (640x480) - fine-tuned margins
         # The content area should be centered with larger margins
-        left_margin = 60    # Increased to pull content inward
-        right_margin = 60   # Increased to pull content inward
-        top_margin = 120    # Increased to pull content down from top
-        display_width = 640 - left_margin - right_margin  # 520px width
+        left_margin = 65    # +5px more inward
+        right_margin = 80   # +20px more inward
+        top_margin = 120    # Perfect as is
+        display_width = 640 - left_margin - right_margin  # 495px width
 
         # Clear clickable headlines list
         if not hasattr(self.ws, 'clickable_headlines'):
@@ -195,9 +195,9 @@ class WeatherStarNewsDisplays:
         else:
             self.ws.clickable_headlines.clear()
 
-        # Scrolling setup - fit in 4:3 display box with larger margins
+        # Scrolling setup - fit in 4:3 display box with fine-tuned margins
         line_height = 26
-        max_visible_height = 290  # Reduced to fit with larger margins (480 - 120 top - 70 bottom)
+        max_visible_height = 270  # Reduced by 20px for more bottom margin (480 - 120 top - 90 bottom)
         total_height = len(headlines) * line_height
         max_scroll = max(0, total_height - max_visible_height)
 
