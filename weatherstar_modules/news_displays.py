@@ -158,11 +158,12 @@ class WeatherStarNewsDisplays:
             'r/DIY': (200, 150, 100),  # Brown
         }
 
-        # Adjusted margins: 15px earlier at top, 20px up at bottom, 10px on right
-        left_margin = 20
-        right_margin = 30  # 10px more on right
-        top_margin = 85    # 15px earlier (was 100)
-        display_width = 640 - left_margin - right_margin  # 590px width
+        # Center content in 4:3 display box (640x480)
+        # The content area should be centered with equal margins
+        left_margin = 50    # Center horizontally
+        right_margin = 50   # Equal margins for centering
+        top_margin = 110    # Properly positioned below header
+        display_width = 640 - left_margin - right_margin  # 540px width
 
         # Clear clickable headlines list
         if not hasattr(self.ws, 'clickable_headlines'):
@@ -170,9 +171,9 @@ class WeatherStarNewsDisplays:
         else:
             self.ws.clickable_headlines.clear()
 
-        # Scrolling setup
+        # Scrolling setup - fit in 4:3 display box
         line_height = 26
-        max_visible_height = 335  # 20px less at bottom (was 355, then 300, now 335)
+        max_visible_height = 310  # Fit within display box (480 - 110 top - 60 bottom)
         total_height = len(headlines) * line_height
         max_scroll = max(0, total_height - max_visible_height)
 
@@ -187,7 +188,7 @@ class WeatherStarNewsDisplays:
             # Only render if within visible area
             if current_y > top_margin - line_height and current_y < (top_margin + max_visible_height):
                 # Calculate space for category
-                cat_width = 95  # Fixed width for category column
+                cat_width = 100  # Fixed width for category column (adjusted for centering)
 
                 # Draw category with color
                 cat_color = category_colors.get(category, COLORS['cyan'])

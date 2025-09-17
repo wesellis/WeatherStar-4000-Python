@@ -839,9 +839,9 @@ class WeatherStarDisplays:
         # Continuous scroll position (loops seamlessly)
         scroll_offset = scroll_time % (total_content_height + content_height)
 
-        # Draw header with reduced spacing for alignment (10px less between TIME and TEMP)
-        header_text = self.ws.font_small.render("TIME    TEMP  CONDITIONS", True, COLORS['yellow'])
-        self.ws.screen.blit(header_text, (60, content_top))
+        # Draw header with adjusted spacing - TIME moved right, TEMP closer
+        header_text = self.ws.font_small.render("TIME  TEMP  CONDITIONS", True, COLORS['yellow'])
+        self.ws.screen.blit(header_text, (65, content_top))
 
         # Create clipping region to hide scrolling text outside content area
         clip_rect = pygame.Rect(0, content_top + 30, SCREEN_WIDTH, content_height)
@@ -879,12 +879,12 @@ class WeatherStarDisplays:
                     # Short forecast
                     short = period.get('shortForecast', '')[:35]
 
-                    # Format the line with reduced spacing between time and temp (10px less)
-                    text = f"{time_display:7} {temp_display:5}{short}"
+                    # Format the line with tighter spacing - TIME and TEMP closer together
+                    text = f"{time_display:6}{temp_display:5}{short}"
 
                     # Use appropriate font
                     period_text = self.ws.font_normal.render(text, True, COLORS['white'])
-                    self.ws.screen.blit(period_text, (60, y_pos))
+                    self.ws.screen.blit(period_text, (65, y_pos))
 
         # Remove clipping
         self.ws.screen.set_clip(None)
