@@ -1259,11 +1259,28 @@ class WeatherStar4000Complete:
                             # Check if clicking on a news headline
                             if hasattr(self, 'clickable_headlines'):
                                 mouse_pos = event.pos
-                                for rect, url in self.clickable_headlines:
-                                    if rect.collidepoint(mouse_pos):
-                                        logger.main_logger.info(f"Opening URL: {url}")
-                                        webbrowser.open(url)
-                                        break
+                                for headline_info in self.clickable_headlines:
+                                    # Handle dict format from news_displays.py
+                                    if isinstance(headline_info, dict):
+                                        rect = headline_info.get('rect')
+                                        url = headline_info.get('url')
+                                        if rect and rect.collidepoint(mouse_pos):
+                                            logger.main_logger.info(f"Opening URL: {url}")
+                                            try:
+                                                webbrowser.open(url)
+                                            except Exception as e:
+                                                logger.main_logger.error(f"Failed to open URL: {e}")
+                                            break
+                                    else:
+                                        # Handle tuple format (legacy)
+                                        try:
+                                            rect, url = headline_info
+                                            if rect.collidepoint(mouse_pos):
+                                                logger.main_logger.info(f"Opening URL: {url}")
+                                                webbrowser.open(url)
+                                                break
+                                        except:
+                                            pass
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             logger.main_logger.info("Escape key pressed")

@@ -39,14 +39,28 @@ class WeatherStarNewsDisplays:
         self.ws.draw_background('1')
         self.ws.draw_header("MSN", "Top Stories")
 
-        # Enhanced headlines with categories
+        # Enhanced headlines with categories - more stories for better scrolling
         headlines = [
             ("[BREAKING]", "Major Winter Storm System Moving Across United States", "https://msn.com/weather"),
-            ("[TECH]", "Apple Announces Revolutionary New Product Line", "https://msn.com/technology"),
-            ("[SPORTS]", "Underdog Team Wins Championship in Overtime", "https://msn.com/sports"),
-            ("[WORLD]", "Global Climate Summit Concludes with Agreement", "https://msn.com/world"),
-            ("[BUSINESS]", "Stock Market Reaches All-Time High", "https://msn.com/money"),
-            ("[ENTERTAINMENT]", "Surprise Winners at Annual Award Show", "https://msn.com/entertainment"),
+            ("[TECH]", "Apple Announces Revolutionary New Product Line for 2025", "https://msn.com/technology"),
+            ("[SPORTS]", "Underdog Team Wins Championship in Overtime Thriller", "https://msn.com/sports"),
+            ("[WORLD]", "Global Climate Summit Concludes with Historic Agreement", "https://msn.com/world"),
+            ("[BUSINESS]", "Stock Market Reaches All-Time High Amid Economic Growth", "https://msn.com/money"),
+            ("[ENTERTAINMENT]", "Surprise Winners at Annual Award Show Last Night", "https://msn.com/entertainment"),
+            ("[HEALTH]", "New Medical Breakthrough Could Change Treatment Options", "https://msn.com/health"),
+            ("[SCIENCE]", "NASA Announces Discovery of Earth-Like Exoplanet", "https://msn.com/science"),
+            ("[POLITICS]", "Congress Passes Major Infrastructure Bill", "https://msn.com/politics"),
+            ("[LOCAL]", "City Council Approves New Development Project Downtown", "https://msn.com/local"),
+            ("[TECH]", "Artificial Intelligence Makes Major Leap Forward", "https://msn.com/tech"),
+            ("[SPORTS]", "Local High School Team Advances to State Finals", "https://msn.com/sports"),
+            ("[BUSINESS]", "Major Company Announces Expansion Plans", "https://msn.com/business"),
+            ("[WORLD]", "International Trade Agreement Signed by Multiple Nations", "https://msn.com/world"),
+            ("[ENTERTAINMENT]", "New Streaming Series Breaks Viewing Records", "https://msn.com/tv"),
+            ("[HEALTH]", "Study Shows Benefits of New Exercise Routine", "https://msn.com/fitness"),
+            ("[SCIENCE]", "Researchers Make Progress on Renewable Energy", "https://msn.com/energy"),
+            ("[BREAKING]", "Emergency Services Respond to Major Incident", "https://msn.com/breaking"),
+            ("[TECH]", "Social Media Platform Introduces New Features", "https://msn.com/social"),
+            ("[SPORTS]", "Olympic Athlete Sets New World Record", "https://msn.com/olympics"),
         ]
 
         self._display_categorized_headlines(headlines, "msn")
@@ -97,23 +111,33 @@ class WeatherStarNewsDisplays:
         self.ws.draw_background('1')
         self.ws.draw_header("Reddit", "Top Posts")
 
-        # Headlines with subreddits - more stories for scrolling
+        # Headlines with subreddits - expanded for better scrolling experience
         headlines = [
-            ("r/news", "Major Scientific Discovery Announced Today by Researchers", "https://reddit.com/r/news"),
-            ("r/technology", "New Open Source Project Gains Massive Traction", "https://reddit.com/r/technology"),
-            ("r/worldnews", "International Summit Reaches Historic Agreement on Trade", "https://reddit.com/r/worldnews"),
-            ("r/science", "Researchers Make Breakthrough in Climate Science Study", "https://reddit.com/r/science"),
-            ("r/gaming", "Highly Anticipated Game Releases Tomorrow Worldwide", "https://reddit.com/r/gaming"),
-            ("r/AskReddit", "What's the Most Interesting Fact You Know?", "https://reddit.com/r/AskReddit"),
-            ("r/todayilearned", "TIL About This Amazing Historical Event", "https://reddit.com/r/todayilearned"),
-            ("r/space", "New Images from James Webb Telescope Released", "https://reddit.com/r/space"),
-            ("r/programming", "Python Overtakes JavaScript in Developer Survey", "https://reddit.com/r/programming"),
-            ("r/dataisbeautiful", "Visualization of Global Internet Usage Patterns", "https://reddit.com/r/dataisbeautiful"),
-            ("r/funny", "Hilarious Video Goes Viral on Social Media", "https://reddit.com/r/funny"),
-            ("r/movies", "Director Announces Sequel to Popular Film Series", "https://reddit.com/r/movies"),
-            ("r/books", "Best-Selling Author Releases New Novel Today", "https://reddit.com/r/books"),
-            ("r/food", "Chef Shares Secret Recipe for Perfect Pasta", "https://reddit.com/r/food"),
-            ("r/DIY", "Complete Guide to Building Your Own Computer", "https://reddit.com/r/DIY"),
+            ("r/news", "Major Scientific Discovery Announced Today by International Research Team", "https://reddit.com/r/news/1"),
+            ("r/technology", "New Open Source Project Gains Massive Traction in Developer Community", "https://reddit.com/r/technology/1"),
+            ("r/worldnews", "International Summit Reaches Historic Agreement on Global Trade", "https://reddit.com/r/worldnews/1"),
+            ("r/science", "Researchers Make Breakthrough in Climate Science Study", "https://reddit.com/r/science/1"),
+            ("r/gaming", "Highly Anticipated Game Releases Tomorrow Worldwide", "https://reddit.com/r/gaming/1"),
+            ("r/AskReddit", "What's the Most Interesting Fact You Know About Space?", "https://reddit.com/r/AskReddit/1"),
+            ("r/todayilearned", "TIL About This Amazing Historical Event from Ancient Rome", "https://reddit.com/r/todayilearned/1"),
+            ("r/space", "New Images from James Webb Telescope Released Today", "https://reddit.com/r/space/1"),
+            ("r/programming", "Python Overtakes JavaScript in Latest Developer Survey", "https://reddit.com/r/programming/1"),
+            ("r/dataisbeautiful", "Visualization of Global Internet Usage Patterns [OC]", "https://reddit.com/r/dataisbeautiful/1"),
+            ("r/funny", "Hilarious Video Goes Viral on Social Media Platform", "https://reddit.com/r/funny/1"),
+            ("r/movies", "Director Announces Sequel to Popular Film Series", "https://reddit.com/r/movies/1"),
+            ("r/books", "Best-Selling Author Releases New Novel in Fantasy Series", "https://reddit.com/r/books/1"),
+            ("r/food", "Chef Shares Secret Recipe for Perfect Italian Pasta", "https://reddit.com/r/food/1"),
+            ("r/DIY", "Complete Guide to Building Your Own Gaming Computer", "https://reddit.com/r/DIY/1"),
+            ("r/news", "Breaking: Major Policy Change Announced by Government", "https://reddit.com/r/news/2"),
+            ("r/technology", "AI Company Reveals Revolutionary New Technology", "https://reddit.com/r/technology/2"),
+            ("r/gaming", "Indie Game Developer Shares Success Story", "https://reddit.com/r/gaming/2"),
+            ("r/science", "New Study Reveals Surprising Facts About Human Brain", "https://reddit.com/r/science/2"),
+            ("r/worldnews", "Economic Summit Addresses Global Financial Challenges", "https://reddit.com/r/worldnews/2"),
+            ("r/AskReddit", "What Life Skill Should Everyone Learn Before 30?", "https://reddit.com/r/AskReddit/2"),
+            ("r/space", "SpaceX Successfully Launches New Mission to ISS", "https://reddit.com/r/space/2"),
+            ("r/programming", "New Programming Language Gaining Popularity", "https://reddit.com/r/programming/2"),
+            ("r/movies", "Classic Film Gets 4K Restoration and Re-release", "https://reddit.com/r/movies/2"),
+            ("r/books", "Book Club Discussion: This Month's Selection", "https://reddit.com/r/books/2"),
         ]
 
         self._display_categorized_headlines(headlines, "reddit")
@@ -158,12 +182,12 @@ class WeatherStarNewsDisplays:
             'r/DIY': (200, 150, 100),  # Brown
         }
 
-        # Center content in 4:3 display box (640x480)
+        # Center content in 4:3 display box (640x480) - 10px tighter on all edges
         # The content area should be centered with equal margins
-        left_margin = 50    # Center horizontally
-        right_margin = 50   # Equal margins for centering
-        top_margin = 110    # Properly positioned below header
-        display_width = 640 - left_margin - right_margin  # 540px width
+        left_margin = 40    # Reduced by 10px
+        right_margin = 40   # Reduced by 10px
+        top_margin = 100    # Reduced by 10px
+        display_width = 640 - left_margin - right_margin  # 560px width
 
         # Clear clickable headlines list
         if not hasattr(self.ws, 'clickable_headlines'):
@@ -171,9 +195,9 @@ class WeatherStarNewsDisplays:
         else:
             self.ws.clickable_headlines.clear()
 
-        # Scrolling setup - fit in 4:3 display box
+        # Scrolling setup - fit in 4:3 display box with tighter margins
         line_height = 26
-        max_visible_height = 310  # Fit within display box (480 - 110 top - 60 bottom)
+        max_visible_height = 330  # Increased by 20px (480 - 100 top - 50 bottom)
         total_height = len(headlines) * line_height
         max_scroll = max(0, total_height - max_visible_height)
 
